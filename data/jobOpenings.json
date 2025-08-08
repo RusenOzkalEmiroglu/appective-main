@@ -1,0 +1,72 @@
+[
+  {
+    "id": "1",
+    "iconName": "Megaphone",
+    "title": "Jr. Ad-Operations Specialist",
+    "shortDescription": "If you have the skills to optimize digital campaigns and make ad operations seamless, this is the role for you. Join us to manage and enhance our advertising strategies.",
+    "isRemote": false,
+    "isTr": true,
+    "slug": "jr-ad-ops-specialist",
+    "details": {
+      "fullTitle": "Junior Ad-Operations Specialist",
+      "description": "Are you passionate about digital advertising and eager to start your career in this exciting field? Do you want to work with platforms like Google Ads, Meta Ads, and programmatic media buying tools while learning from experienced professionals? If yes, we are looking for you! We are seeking a Junior Ad-Operations Specialist to join our team and support our advertising operations. This is an entry-level role designed for someone who is enthusiastic about digital advertising, eager to learn, and ready to build a career in this fast-paced industry.",
+      "whatYouWillDo": [
+        "Assisting in the planning, execution, and optimization of ad campaigns across platforms like Google Ads, Meta Ads, and programmatic media buying tools.",
+        "Learning to monitor campaign performance metrics and identifying opportunities for improvement.",
+        "Supporting keyword research, audience targeting, and ad copy creation.",
+        "Collaborating with the team to ensure campaigns align with overall marketing goals.",
+        "Staying updated on the latest trends and best practices in digital advertising."
+      ],
+      "whatWereLookingFor": [
+        "A genuine interest in digital advertising and a desire to build a career in this field.",
+        "Basic understanding of advertising platforms or a willingness to learn (training will be provided).",
+        "A Bachelor's degree in Business Administration, Economics, Marketing, or a related field is preferred but not mandatory.",
+        "Good command of English (intermediate level or higher).",
+        "Strong organizational skills and attention to detail.",
+        "A proactive, can-do attitude and a hunger for learning."
+      ],
+      "whyJoinUs": [
+        "Get hands-on experience with leading advertising platforms and tools.",
+        "Work with a supportive team that values mentorship and professional growth.",
+        "Build a strong foundation in digital advertising and programmatic media buying.",
+        "Be part of a dynamic and innovative work environment."
+      ],
+      "applyLink": "#"
+    }
+  },
+  {
+    "id": "2",
+    "iconName": "Share2",
+    "title": "Social Media Manager",
+    "shortDescription": "Lets take things to the next level! If you have the creativity to make social media look and perform at its best, you'll fit right in. Drive our online presence.",
+    "isRemote": true,
+    "isTr": false,
+    "slug": "social-media-manager",
+    "details": {
+      "fullTitle": "Social Media Manager",
+      "description": "We are looking for a talented Social Media Manager to administer our social media accounts. You will be responsible for creating original text and video content, managing posts and responding to followers. You will manage our company image in a cohesive way to achieve our marketing goals.",
+      "whatYouWillDo": [
+        "Design and implement social media strategy to align with business goals.",
+        "Generate, edit, publish and share engaging content daily (e.g. original text, photos, videos and news).",
+        "Monitor SEO and web traffic metrics.",
+        "Collaborate with other teams, like marketing, sales and customer service to ensure brand consistency.",
+        "Communicate with followers, respond to queries in a timely manner and monitor customer reviews."
+      ],
+      "whatWereLookingFor": [
+        "Proven work experience as a Social media manager.",
+        "Hands on experience in content management.",
+        "Excellent copywriting skills.",
+        "Ability to deliver creative content (text, image and video).",
+        "Solid knowledge of SEO, keyword research and Google Analytics.",
+        "Knowledge of online marketing channels."
+      ],
+      "whyJoinUs": [
+        "Opportunity to shape the voice of a growing brand.",
+        "Creative freedom and a collaborative environment.",
+        "Competitive salary and benefits.",
+        "Flexible working arrangements."
+      ],
+      "applyLink": "#"
+    }
+  }
+]

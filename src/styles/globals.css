@@ -1,0 +1,246 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Library 3 am';
+  src: url('/Library 3 am.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+.font-library-3-am {
+  font-family: 'Library 3 am', sans-serif;
+}
+
+:root {
+  --primary: #8A2BE2;
+  --primary-light: #9D4EDD;
+  --primary-dark: #6A0DAD;
+  --dark: #000000;
+  --light: #F8F8F8;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--dark);
+  color: var(--light);
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  position: relative;
+}
+
+/* Mobil ekran genişliğine sığdırma */
+.container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  margin: 0 auto;
+}
+
+/* Mobil görünümde yatay kaydırmayı engelleme */
+@media (max-width: 768px) {
+  html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  
+  img, video {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  .container {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+.custom-cursor {
+  position: fixed;
+  width: 20px;
+  height: 20px;
+  background-color: var(--primary);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  transition: width 0.3s, height 0.3s, background-color 0.3s;
+  mix-blend-mode: difference;
+  opacity: 0.8;
+}
+
+.cursor-follower {
+  position: fixed;
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--primary-light);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9998;
+  transform: translate(-50%, -50%);
+  transition: all 0.3s ease;
+  transition-property: width, height, border-color, transform;
+  opacity: 0.7;
+}
+
+.custom-cursor.click {
+  width: 18px;
+  height: 18px;
+  background-color: var(--primary-light);
+}
+
+.cursor-follower.click {
+  width: 30px;
+  height: 30px;
+  border-color: var(--primary);
+  transform: translate(-50%, -50%) scale(0.8);
+}
+
+a:hover ~ .cursor-follower,
+button:hover ~ .cursor-follower {
+  width: 60px;
+  height: 60px;
+  border-color: var(--primary-light);
+  background-color: rgba(138, 43, 226, 0.1);
+}
+
+.noise-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.05;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.gradient-text {
+  background: linear-gradient(90deg, var(--primary-light), var(--primary-dark));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.section {
+  padding: 120px 0;
+}
+
+@media (max-width: 768px) {
+  .section {
+    padding: 80px 0;
+  }
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Interactive elements */
+.interactive-btn {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.interactive-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: all 0.5s ease;
+}
+
+.interactive-btn:hover::before {
+  left: 100%;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.8s ease forwards;
+}
+
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-400 { animation-delay: 0.4s; }
+.delay-500 { animation-delay: 0.5s; }
+
+/* Scroll reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s ease;
+}
+
+.reveal.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Magnetic elements */
+.magnetic {
+  transition: transform 0.3s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+/* Menu Item Glow and Spray Effect */
+.menu-item-glow-spray {
+  position: relative; /* Potansiyel SVG parçacıkları için gelecekteki psödo elemanlar için gerekli */
+  transition: text-shadow 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), color 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
+  will-change: text-shadow, color; /* Performans ipucu */
+}
+
+.menu-item-glow-spray:hover {
+  color: #fff; /* Parlama için daha parlak metin */
+  text-shadow:
+    0 0 5px var(--primary-light),
+    0 0 10px var(--primary-light),
+    0 0 15px var(--primary),
+    0 0 25px var(--primary),
+    0px 1px 1px rgba(0, 0, 0, 0.2),
+    1px -1px 0px rgba(200, 220, 255, 0.3),
+    -1px 1px 0px rgba(200, 220, 255, 0.3);
+}
+
+/*
+  İstekte belirtilen daha gelişmiş bir "sprey parçacık" efekti için,
+  hover durumunda tetiklenen SVG öğelerini veya küçük bir JavaScript parçacık animasyonunu
+  entegre etmeyi düşünebilirsiniz. Mevcut CSS, parlama ve ıslak yansıma sağlar.
+*/
+
+/* Logo Neon Pulse Glow Effect */
+@keyframes neonPulseGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 1.35px #ffffff) drop-shadow(0 0 2.7px #ffffff) opacity(0.7);
+  }
+  50% {
+    filter: drop-shadow(0 0 2.7px #ffffff) drop-shadow(0 0 5.4px #ffffff) opacity(1);
+  }
+}
+
+.logo-pulse-glow {
+  animation: neonPulseGlow 5.3s infinite ease-in-out;
+  will-change: filter, opacity; /* Performans ipucu */
+}

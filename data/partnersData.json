@@ -1,0 +1,244 @@
+[
+  {
+    "id": "automotive",
+    "name": "Automotive",
+    "originalPath": "automotive",
+    "logos": [
+      {
+        "id": "turkiye_sigorta",
+        "alt": "Türkiye Sigorta",
+        "imagePath": "/images/is_ortaklari/automotive/turkiye.svg",
+        "url": "https://www.turkiyesigorta.com.tr/"
+      },
+      {
+        "id": "vakifbank",
+        "alt": "Vakıfbank",
+        "imagePath": "/images/is_ortaklari/automotive/vakif.svg"
+      },
+      {
+        "id": "yapi_kredi",
+        "alt": "Yapı Kredi",
+        "imagePath": "/images/is_ortaklari/automotive/yapikredi.svg"
+      }
+    ]
+  },
+  {
+    "id": "betting",
+    "name": "Betting",
+    "originalPath": "Betting",
+    "logos": [
+      {
+        "id": "ziraat_bankasi",
+        "alt": "Ziraat Bankası",
+        "imagePath": "/images/is_ortaklari/Betting/ziraat.svg"
+      },
+      {
+        "id": "ziraat_katilim",
+        "alt": "Ziraat Katılım",
+        "imagePath": "/images/is_ortaklari/Betting/ziraatkatilim.svg"
+      }
+    ]
+  },
+  {
+    "id": "communication",
+    "name": "Communication",
+    "originalPath": "Communication",
+    "logos": [
+      {
+        "id": "denizbank",
+        "alt": "Denizbank",
+        "imagePath": "/images/is_ortaklari/Communication/denizbank.svg"
+      },
+      {
+        "id": "kuveyt_turk",
+        "alt": "Kuveyt Türk",
+        "imagePath": "/images/is_ortaklari/Communication/kuveyt.svg"
+      },
+      {
+        "id": "n_kolay",
+        "alt": "N Kolay",
+        "imagePath": "/images/is_ortaklari/Communication/nkolay.svg"
+      },
+      {
+        "id": "odeabank",
+        "alt": "Odeabank",
+        "imagePath": "/images/is_ortaklari/Communication/odea.svg"
+      },
+      {
+        "id": "on_dijital",
+        "alt": "ON Dijital Bankacılık",
+        "imagePath": "/images/is_ortaklari/Communication/on.svg"
+      },
+      {
+        "id": "qnb_finansbank",
+        "alt": "QNB Finansbank",
+        "imagePath": "/images/is_ortaklari/Communication/qnb.svg"
+      },
+      {
+        "id": "teb",
+        "alt": "TEB",
+        "imagePath": "/images/is_ortaklari/Communication/teb.svg"
+      }
+    ]
+  },
+  {
+    "id": "ecommerce",
+    "name": "E-commerce",
+    "originalPath": "ecommerce",
+    "logos": []
+  },
+  {
+    "id": "fashion",
+    "name": "Fashion",
+    "originalPath": "fashion",
+    "logos": []
+  },
+  {
+    "id": "finance",
+    "name": "Finance",
+    "originalPath": "finance",
+    "logos": [
+      {
+        "id": "alternatif_bank",
+        "alt": "Alternatif Bank",
+        "imagePath": "/images/is_ortaklari/finance/alternatifbank.svg"
+      }
+    ]
+  },
+  {
+    "id": "media",
+    "name": "Media",
+    "originalPath": "media",
+    "logos": [
+      {
+        "id": "anadolubank",
+        "alt": "Anadolubank",
+        "imagePath": "/images/is_ortaklari/media/anadolubank.svg"
+      },
+      {
+        "id": "dunya_gazetesi",
+        "alt": "Dünya Gazetesi",
+        "imagePath": "/images/is_ortaklari/media/dunya.svg"
+      },
+      {
+        "id": "enpara",
+        "alt": "Enpara.com",
+        "imagePath": "/images/is_ortaklari/media/enpaa.svg"
+      },
+      {
+        "id": "fibabanka",
+        "alt": "Fibabanka",
+        "imagePath": "/images/is_ortaklari/media/fiba.svg"
+      }
+    ]
+  },
+  {
+    "id": "others",
+    "name": "Others",
+    "originalPath": "others",
+    "logos": [
+      {
+        "id": "cepteteb",
+        "alt": "CEPTETEB",
+        "imagePath": "/images/is_ortaklari/others/cepteteb.svg"
+      },
+      {
+        "id": "garanti_bbva",
+        "alt": "Garanti BBVA",
+        "imagePath": "/images/is_ortaklari/others/garanti.svg"
+      },
+      {
+        "id": "getir",
+        "alt": "Getir",
+        "imagePath": "/images/is_ortaklari/others/getir.svg"
+      },
+      {
+        "id": "halkbank",
+        "alt": "Halkbank",
+        "imagePath": "/images/is_ortaklari/others/halkbank.svg"
+      },
+      {
+        "id": "hsbc",
+        "alt": "HSBC",
+        "imagePath": "/images/is_ortaklari/others/hsbc.svg"
+      },
+      {
+        "id": "ing",
+        "alt": "ING",
+        "imagePath": "/images/is_ortaklari/others/ing.svg"
+      },
+      {
+        "id": "is_bankasi",
+        "alt": "İş Bankası",
+        "imagePath": "/images/is_ortaklari/others/is.svg"
+      }
+    ]
+  },
+  {
+    "id": "technology",
+    "name": "Technology",
+    "originalPath": "technology",
+    "logos": [
+      {
+        "id": "akbank",
+        "alt": "Akbank",
+        "imagePath": "/images/is_ortaklari/technology/akbank.svg"
+      }
+    ]
+  },
+  {
+    "id": "interactive_masthead",
+    "name": "Interactive Masthead",
+    "originalPath": "interactive_masthead",
+    "logos": []
+  },
+  {
+    "id": "70dbba51-ab19-401d-aeb2-421065409dae",
+    "name": "Agency",
+    "originalPath": "agency",
+    "logos": [
+      {
+        "id": "343d9ad6-cd41-4c30-9b2a-4b460072dda7",
+        "alt": "groupm",
+        "imagePath": "/images/is_ortaklari/agency/groupm-49028e81.png"
+      },
+      {
+        "id": "6fbacf7b-ff4e-452f-83ea-323212159ca1",
+        "alt": "omd",
+        "imagePath": "/images/is_ortaklari/agency/omd-2a7411e4.png"
+      },
+      {
+        "id": "5c1639d5-a383-4703-8b0a-ecc75c81b179",
+        "alt": "mindshare",
+        "imagePath": "/images/is_ortaklari/agency/mindshare-699357c1.png"
+      },
+      {
+        "id": "b74c0e05-9c52-4888-904a-8936daf0cd6e",
+        "alt": "13brave",
+        "imagePath": "/images/is_ortaklari/agency/13brave-d7222567.png"
+      },
+      {
+        "id": "e30c281a-7e8a-4661-b3e4-edca6a1592d8",
+        "alt": "adintrection",
+        "imagePath": "/images/is_ortaklari/agency/adintrection-d36a4414.png"
+      },
+      {
+        "id": "07f61733-9ef9-4aea-9e22-aa534dd5ab6a",
+        "alt": "publiciks",
+        "imagePath": "/images/is_ortaklari/agency/publiciks-317f6c3a.png"
+      }
+    ]
+  },
+  {
+    "id": "be5db18a-c83b-4ff9-8561-47edc568bceb",
+    "name": "Travel",
+    "originalPath": "travel",
+    "logos": [
+      {
+        "id": "81117954-543c-4c05-bf35-7987eceb2dac",
+        "alt": "avis_alt_metin",
+        "imagePath": "/images/is_ortaklari/travel/avis_alt_metin-9636b617.png"
+      }
+    ]
+  }
+]

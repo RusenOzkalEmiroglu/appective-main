@@ -1,0 +1,38 @@
+[
+  {
+    "id": "3806cdfd-5875-4bec-937f-590214fea348",
+    "jobId": "2",
+    "jobTitle": "Social Media Manager",
+    "fullName": "Ruşen Emiroğlu",
+    "email": "ozkal@appective.net",
+    "phone": "+905012221088",
+    "message": "test ilk bakalı neye başvuruyoruz",
+    "cvFilePath": "/uploads/cv/1809c90c-5dfc-465d-adb8-98acd4a3317a.pdf",
+    "createdAt": "2025-06-26T06:32:32.280Z",
+    "status": "reviewed"
+  },
+  {
+    "id": "9dcc9786-98f9-483d-a41f-b5b50a23ab96",
+    "jobId": "1",
+    "jobTitle": "Junior Ad-Operations Specialist",
+    "fullName": "Berke berke",
+    "email": "berke@berke.com",
+    "phone": "+905012221090",
+    "message": "juninor",
+    "cvFilePath": "/uploads/cv/39eb805f-0ae5-42f0-995c-196979ed99cc.pdf",
+    "createdAt": "2025-06-26T07:12:19.218Z",
+    "status": "pending"
+  },
+  {
+    "id": "2519d9f9-3c34-43dd-8f23-6cb3be99a2e7",
+    "jobId": "1",
+    "jobTitle": "Junior Ad-Operations Specialist",
+    "fullName": "Turgut Akca",
+    "email": "turgut@appective.net",
+    "phone": "05012221765",
+    "message": "uauieaueaua",
+    "cvFilePath": "/uploads/cv/f1757d06-d91e-4feb-8f31-1bc31782a1da.pdf",
+    "createdAt": "2025-06-26T07:46:57.881Z",
+    "status": "pending"
+  }
+]

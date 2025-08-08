@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Under Armour Spor Bilgi Yarışması</title>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 250px; /* Iframe yüksekliği */
+            width: 450px; /* Iframe genişliği */
+            margin: 0;
+            background-color: transparent; /* Ana reklamın arka planı üzerinden görünsün */
+            font-family: 'Anton', sans-serif;
+            overflow: hidden; /* Taşmayı gizle */
+            box-sizing: border-box;
+            padding: 5px; /* Kenar boşluğunu biraz azalt */
+            position: relative; /* Başlangıç/bitiş ekranlarının mutlak konumlandırması için */
+        }
+
+        /* Tüm "ekranlar" için temel stiller */
+        #quiz-container, #start-screen, #end-screen {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            box-sizing: border-box;
+            padding: 10px;
+            pointer-events: none; /* Başlangıçta tüm etkileşimleri devre dışı bırak */
+            opacity: 0; /* Varsayılan olarak gizli */
+            transition: opacity 0.5s ease-in-out; /* Ekranların gösterimi/gizlenmesi için yumuşak geçiş */
+            background-color: transparent; /* Arka plan tamamen şeffaf */
+        }
+
+        /* Ekran görünürlüğü ve z-index */
+        #start-screen {
+            z-index: 3; /* Başlangıç ekranı başta en üstte */
+            opacity: 1; /* Yüklenirken başlangıç ekranını görünür yap */
+            pointer-events: auto; /* Başlangıç ekranı için etkileşimleri etkinleştir */
+            border: 2px solid rgba(255, 255, 255, 0.1); /* Hafif kenarlık */
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5); /* Derinlik için iç gölge */
+        }
+        #quiz-container {
+            z-index: 2; /* Quiz başlangıç ekranının altında */
+        }
+        #end-screen {
+            z-index: 4; /* Bitiş ekranı gösterildiğinde her şeyin üstünde */
+        }
+
+        /* Başlangıç Ekranı Özellikleri */
+        #start-screen h1 {
+            font-size: 36px;
+            color: white; /* "BİLGİNİ TEST ET" kısmı beyaz */
+            margin-bottom: 8px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+            max-width: 90%;
+            line-height: 1.1;
+            text-transform: uppercase;
+        }
+        /* "İNDİRİMİ KAP!" kelimesini sarı yapmak için */
+        #start-screen h1 .discount-emphasis {
+            color: #FFC000; /* Under Armour altın/sarı */
+        }
+        #start-screen p {
+            font-size: 18px;
+            color: #E0E0E0; /* Slogan için daha açık gri */
+            margin-bottom: 20px;
+            line-height: 1.2;
+            max-width: 90%;
+        }
+        
+        /* Ortak buton stilleri (Başla ve İndirim butonu için) */
+        .action-button {
+            background-color: #FFC000; /* Under Armour altın/sarı */
+            border: 2px solid #FFD700; /* Uyumlu kenarlık */
+            color: #222; /* Kontrast için koyu metin */
+            padding: 12px 25px; /* Etki için biraz daha büyük dolgu */
+            border-radius: 8px; /* Biraz daha büyük border-radius */
+            cursor: pointer;
+            font-size: 24px; /* Vurgu için daha büyük font */
+            font-family: 'Anton', sans-serif;
+            text-transform: uppercase;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.6);
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            animation: startButtonPulse 1.8s infinite ease-in-out; /* Nabız animasyonu */
+        }
+        .action-button:hover {
+            background-color: #FFD700;
+            transform: translateY(-2px);
+        }
+        .action-button:active {
+            transform: scale(0.98);
+        }
+
+        /* Başla butonu ve İndirim butonu için nabız animasyonu */
+        @keyframes startButtonPulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(255, 192, 0, 0.7);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 0 15px rgba(255, 192, 0, 0); /* Daha büyük bir ışık halkası */
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(255, 192, 0, 0);
+            }
+        }
+
+        /* Quiz İçeriği Özellikleri */
+        #question-text {
+            font-size: 28px;
+            margin-bottom: 15px;
+            color: white;
+            line-height: 1.2;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+            max-width: 95%;
+            min-height: 70px; /* Kaymayı önlemek için sabit yükseklik */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #options-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            max-width: 430px;
+            margin-top: 10px;
+            min-height: 100px; /* Düzen kaymasını önlemek için seçenekler için sabit yükseklik */
+        }
+        .option-button {
+            background-color: rgba(255, 255, 255, 0.2);
+            border: 2px solid white;
+            color: white;
+            padding: 8px 12px;
+            margin: 4px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            flex: 1 1 auto;
+            min-width: 100px;
+            max-width: 140px;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            font-family: 'Anton', sans-serif;
+            text-transform: uppercase;
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .option-button:hover {
+            background-color: rgba(255, 255, 255, 0.4);
+        }
+        .option-button:active {
+            transform: scale(0.98);
+        }
+        .feedback {
+            margin-top: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+            min-height: 25px; /* Düzen kaymasını önlemek için sabit yükseklik */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .correct {
+            color: limegreen;
+        }
+        .incorrect {
+            color: tomato;
+        }
+
+        /* Soru Geçiş Efekti */
+        .quiz-exit-animation {
+            animation: slideOutLeft 0.5s ease-in-out forwards;
+        }
+        .quiz-enter-animation {
+            animation: slideInRight 0.5s ease-in-out forwards;
+        }
+
+        @keyframes slideOutLeft {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(-100%); opacity: 0; }
+        }
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Bitiş Ekranı Özellikleri */
+        #end-screen h1 {
+            font-size: 36px;
+            color: #FFC000; /* Under Armour altın/sarı vurgu için */
+            margin-bottom: 8px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+            text-transform: uppercase; /* Bitiş başlığını da büyük harf yap */
+        }
+        #discount-button { /* Bitiş ekranı butonu */
+            margin-top: 20px; /* Başlıktan biraz boşluk */
+        }
+
+        /* Konfeti Efekti */
+        #confetti-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Arkasındaki öğelerle etkileşime izin ver */
+            overflow: hidden; /* Taşmayı gizle */
+        }
+
+        .confetti-piece {
+            position: absolute;
+            width: 8px; /* Konfeti boyutu */
+            height: 8px;
+            background-color: transparent; /* JS tarafından ayarlanacak */
+            transform-origin: center;
+            pointer-events: none;
+            opacity: 0; /* Başlangıçta gizli */
+            left: 50%; /* Başlangıçta merkeze konumlandır */
+            top: 50%;
+            /* transform: translate(-50%, -50%); --> Animasyon içinde ayarlanacak */
+        }
+
+        @keyframes confetti-burst-and-fall {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0); /* Merkezde, küçük ve görünmez */
+            }
+            10% {
+                opacity: 1;
+                transform: translate(calc(-50% + var(--burst-x, 0px)), calc(-50% + var(--burst-y, 0px))) scale(1.2); /* Patlama yönünde hafifçe büyüyerek */
+            }
+            100% {
+                opacity: 0;
+                transform: translate(calc(-50% + var(--final-x, 0px)), calc(-50% + var(--final-y, 0px))) rotateZ(720deg) scale(0.5); /* Farklı x ve y ile aşağı düşerken döner ve kaybolur */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="start-screen">
+        <h1>BİLGİNİ TEST ET VE <span class="discount-emphasis">İNDİRİMİ KAP!</span></h1>
+        <p>"İSTİYORUM, YAPACAĞIM, DURMAYACAĞIM."</p>
+        <button id="start-button" class="action-button">BAŞLA</button>
+    </div>
+
+    <div id="quiz-container">
+        <div id="question-text"></div>
+        <div id="options-container"></div>
+        <div id="feedback" class="feedback"></div>
+    </div>
+
+    <div id="end-screen">
+        <h1>TEBRİKLER!</h1>
+        <button id="discount-button" class="action-button">İNDİRİM KODUNUZ HAZIR!</button>
+        <div id="confetti-container"></div>
+    </div>
+
+    <script>
+        const questions = [
+            {
+                question: "The Rock WWE şampiyonluğunu kaç kez kazandı?",
+                options: ["8", "10", "7"],
+                answer: "10"
+            },
+            {
+                question: "Curry ilk NBA şampiyonluğunu ne zaman kazandı?",
+                options: ["2014", "2015", "2016"],
+                answer: "2015"
+            },
+            {
+                question: "Cam Newton MVP ödülünü hangi sezonda aldı?",
+                options: ["2014", "2015", "2016"],
+                answer: "2015"
+            },
+            {
+                question: "Joshua 2016'da hangi dünya kemerini kazandı?",
+                options: ["WBC", "WBA", "IBF"],
+                answer: "IBF"
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        const startScreen = document.getElementById('start-screen');
+        const quizContainer = document.getElementById('quiz-container');
+        const endScreen = document.getElementById('end-screen');
+        const startButton = document.getElementById('start-button');
+        const discountButton = document.getElementById('discount-button');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const feedbackElement = document.getElementById('feedback');
+        const confettiContainer = document.getElementById('confetti-container');
+
+        // İndirim linki (Bu URL GWD'deki 'cikis' etkinliğine atanmış olmalı)
+        const discountUrl = 'https://www.underarmour.com.tr/';
+
+        function showQuiz() {
+            startScreen.style.opacity = 0;
+            startScreen.style.pointerEvents = 'none';
+            // Quiz başladığında buton animasyonunu durdur
+            startButton.style.animation = 'none';
+            setTimeout(() => {
+                startScreen.style.display = 'none';
+                quizContainer.style.opacity = 1;
+                quizContainer.style.pointerEvents = 'auto';
+                loadQuestion();
+            }, 500); // Başlangıç ekranı solma süresiyle eşleşsin
+        }
+
+        function loadQuestion() {
+            if (currentQuestionIndex < questions.length) {
+                const q = questions[currentQuestionIndex];
+                feedbackElement.textContent = ''; // Geri bildirimi hemen temizle
+
+                // İlk soru değilse çıkış animasyonu uygula
+                if (questionText.textContent !== '' && currentQuestionIndex > 0) {
+                    quizContainer.classList.add('quiz-exit-animation');
+                    // Geçiş sırasında butonları devre dışı bırak
+                    Array.from(optionsContainer.children).forEach(button => {
+                        button.disabled = true;
+                    });
+
+                    setTimeout(() => {
+                        quizContainer.classList.remove('quiz-exit-animation');
+                        questionText.textContent = q.question;
+                        optionsContainer.innerHTML = ''; // Önceki seçenekleri temizle
+                        const shuffledOptions = [...q.options].sort(() => Math.random() - 0.5); // Seçenekleri karıştır
+                        shuffledOptions.forEach(option => {
+                            const button = document.createElement('button');
+                            button.classList.add('option-button');
+                            button.textContent = option;
+                            button.onclick = () => checkAnswer(option, q.answer);
+                            optionsContainer.appendChild(button);
+                        });
+                        quizContainer.classList.add('quiz-enter-animation');
+                        setTimeout(() => {
+                            quizContainer.classList.remove('quiz-enter-animation');
+                            // Giriş animasyonu tamamlandıktan sonra butonları tekrar etkinleştir
+                            Array.from(optionsContainer.children).forEach(button => {
+                                button.disabled = false;
+                            });
+                        }, 500); // Giriş animasyonunun süresi
+                    }, 500); // Çıkış animasyonunun süresi
+                } else { // İlk soru yüklemesi, çıkış animasyonuna gerek yok
+                    questionText.textContent = q.question;
+                    optionsContainer.innerHTML = '';
+                    const shuffledOptions = [...q.options].sort(() => Math.random() - 0.5);
+                    shuffledOptions.forEach(option => {
+                        const button = document.createElement('button');
+                        button.classList.add('option-button');
+                        button.textContent = option;
+                        button.onclick = () => checkAnswer(option, q.answer);
+                        optionsContainer.appendChild(button);
+                    });
+                    // İlk yüklemede butonların etkin olduğundan emin ol
+                    Array.from(optionsContainer.children).forEach(button => {
+                        button.disabled = false;
+                    });
+                }
+
+            } else {
+                showEndScreen();
+            }
+        }
+
+        function checkAnswer(selectedOption, correctAnswer) {
+            // Tüm butonları devre dışı bırak
+            Array.from(optionsContainer.children).forEach(button => {
+                button.disabled = true;
+            });
+
+            if (selectedOption === correctAnswer) {
+                feedbackElement.textContent = 'Doğru!';
+                feedbackElement.classList.remove('incorrect');
+                feedbackElement.classList.add('correct');
+                setTimeout(() => {
+                    currentQuestionIndex++;
+                    loadQuestion();
+                }, 1000); // 1 saniye sonra sonraki soruya geç
+            } else {
+                feedbackElement.textContent = 'Yanlış!';
+                feedbackElement.classList.remove('correct');
+                feedbackElement.classList.add('incorrect');
+                setTimeout(() => {
+                    // Yanlış cevap sonrası butonları tekrar etkinleştir
+                    Array.from(optionsContainer.children).forEach(button => {
+                        button.disabled = false;
+                    });
+                    feedbackElement.textContent = ''; // Geri bildirimi temizle
+                }, 1000); // 1 saniye sonra geri bildirimi temizle
+            }
+        }
+
+        // Konfeti parçası oluşturan fonksiyon
+        function createConfettiPiece() {
+            const piece = document.createElement('div');
+            piece.classList.add('confetti-piece');
+            const colors = ['#000', '#fff', '#808080']; // Siyah, Beyaz, Gri konfeti renkleri
+            piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            
+            // Konfeti için rastgele patlama yönleri ve güçleri
+            const burstStrength = Math.random() * 250 + 70; // Ne kadar uzağa fırlayacağı (70 ile 320px arası)
+            const angle = Math.random() * 2 * Math.PI; // Rastgele açı (0 ile 360 derece arası)
+            const burstX = burstStrength * Math.cos(angle); // X yönündeki fırlama
+            const burstY = burstStrength * Math.sin(angle); // Y yönündeki fırlama
+
+            // Konfetinin son düşüş noktası (ekranın dışına doğru yayılır)
+            const finalX = burstX + (Math.random() - 0.5) * 100; // Y ekseninde biraz daha yayılma
+            const finalY = (confettiContainer.offsetHeight / 2) + Math.random() * 250 + 100; // Ortadan itibaren aşağı düşüş
+
+            piece.style.setProperty('--burst-x', `${burstX}px`);
+            piece.style.setProperty('--burst-y', `${burstY}px`);
+            piece.style.setProperty('--final-x', `${finalX}px`); 
+            piece.style.setProperty('--final-y', `${finalY}px`);
+            
+            piece.style.animation = `confetti-burst-and-fall ${2 + Math.random() * 1.5}s ease-out forwards`; // Rastgele süre
+            piece.style.animationDelay = `${Math.random() * 0.5}s`; // Animasyon başlangıcını geciktir
+
+            confettiContainer.appendChild(piece);
+
+            // Animasyon bittikten sonra parçayı DOM'dan kaldır
+            piece.addEventListener('animationend', () => {
+                piece.remove();
+            });
+        }
+
+        // Belirtilen sayıda konfeti oluşturan fonksiyon
+        function triggerConfetti(count = 100) { // Varsayılan olarak 100 parça
+            for (let i = 0; i < count; i++) {
+                createConfettiPiece();
+            }
+        }
+
+        function showEndScreen() {
+            quizContainer.style.opacity = 0;
+            quizContainer.style.pointerEvents = 'none';
+            setTimeout(() => {
+                quizContainer.style.display = 'none';
+                endScreen.style.opacity = 1;
+                endScreen.style.pointerEvents = 'auto'; // End screen ve butonları etkinleştir
+                
+                triggerConfetti(); // Konfeti efektini başlat
+
+                // Yönlendirme artık buton tıklamasına bağlı olduğu için burada setTimeout'a gerek yok
+            }, 500); // Quiz container solma süresiyle eşleşsin
+        }
+
+        // Buton tıklama olayları
+        startButton.addEventListener('click', showQuiz);
+        discountButton.addEventListener('click', () => {
+            console.log("İndirim butonu tıklandı!");
+
+            // Yönlendirme logic'i
+            // GWD'de iframe içinden ana reklamı yönlendirmek için gwd.actions.gwdGoogleAd.exit() kullanılır.
+            if (window.parent && window.parent.gwd && typeof window.parent.gwd.actions.gwdGoogleAd.exit === 'function') {
+                console.log("GWD ortamı algılandı. gwd.actions.gwdGoogleAd.exit çağrılıyor.");
+                // Parametreler: adId, exitId, url, opt_collapse, opt_pauseMedia, opt_pageId
+                // 'gwd-ad' ana reklam elementinin ID'si, 'cikis' sizin Metrik Kimliğiniz.
+                // Son 3 parametre (true, true, 'page1_5') GWD'nin otomatik oluşturduğu çıkış davranışını taklit eder.
+                window.parent.gwd.actions.gwdGoogleAd.exit('gwd-ad', 'cikis', discountUrl, true, true, 'page1_5'); 
+            } else {
+                console.log("GWD ortamı algılanmadı veya gwdGoogleAd.exit API mevcut değil. URL yeni sekmede açılıyor.");
+                // GWD olmayan ortamlar için yedek (yeni sekmede açar)
+                window.open(discountUrl, '_blank');
+            }
+        });
+        
+        // DOM yüklendiğinde başlangıç ekranını ayarla
+        document.addEventListener('DOMContentLoaded', () => {
+            quizContainer.style.opacity = 0;
+            quizContainer.style.pointerEvents = 'none';
+            endScreen.style.opacity = 0;
+            endScreen.style.pointerEvents = 'none';
+            startScreen.style.opacity = 1;
+            startScreen.style.pointerEvents = 'auto';
+        });
+    </script>
+</body>
+</html>

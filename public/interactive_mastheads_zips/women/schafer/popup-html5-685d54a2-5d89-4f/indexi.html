@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schafer Mutfak Eşyaları Toplama Oyunu</title>
+    <style>
+        /* CSS Başlangıcı */
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%; /* iframe'in yüksekliğinin %100'ü */
+            width: 100%; /* iframe'in genişliğinin %100'ü */
+            background-color: transparent; /* GWD için önemli: Arka plan tamamen transparan */
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        #game-container {
+            width: 600px; /* GWD iframe genişliği ile eşleşmeli */
+            height: 240px; /* GWD iframe yüksekliği ile eşleşmeli */
+            border: none;
+            position: relative; /* İçindeki absolute konumlandırılmış elemanlar için kritik */
+            overflow: hidden;
+            background-color: transparent; /* GWD için önemli: İç arka plan da transparan */
+            box-shadow: none;
+        }
+
+        #game-area {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        #basket {
+            width: 80px;
+            height: 60px;
+            background-image: url('./basket.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            position: absolute;
+            bottom: 10px;
+            left: calc(50% - 40px);
+            background-color: transparent;
+        }
+
+        .falling-item {
+            width: 40px;
+            height: 40px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            position: absolute;
+            top: -50px; 
+            filter: drop-shadow(2px 2px 5px rgba(0, 0, 0, 0.4));
+        }
+
+        .plate {
+            background-image: url('./plate.png');
+        }
+        .cup {
+            background-image: url('./cup.png');
+        }
+        .pot {
+            background-image: url('./pot.png');
+        }
+
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            z-index: 5;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.7);
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%; /* Artık #game-container'ın %100'ü */
+            height: 100%; /* Artık #game-container'ın %100'ü */
+            background-color: rgba(255, 255, 255, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out;
+            z-index: 10;
+        }
+
+        .screen.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .screen h1 {
+            color: #DA251C; /* Rengi güncellendi */
+            margin-bottom: 15px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 28px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .screen p {
+            color: #555;
+            margin-bottom: 25px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 16px;
+        }
+
+        /* Butonlar için renk ve efektler */
+        .screen button, .screen a {
+            background-color: #DA251C; /* Rengi güncellendi */
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 18px;
+            cursor: pointer;
+            border-radius: 8px;
+            text-decoration: none;
+            margin: 8px;
+            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease; /* Gölge geçişi eklendi */
+            font-family: 'Montserrat', sans-serif;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Hafif başlangıç gölgesi */
+            animation: buttonPulse 2s infinite ease-in-out; /* Sürekli hafif nabız efekti */
+        }
+
+        .screen button:hover, .screen a:hover {
+            background-color: #C81F15; /* Hover rengi güncellendi */
+            transform: translateY(-2px) scale(1.05); /* Yukarı kayma ve büyüme */
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); /* Daha belirgin gölge */
+            animation: none; /* Hoverdayken nabız efektini durdur */
+        }
+
+        /* Butonlar için nabız (pulse) animasyonu */
+        @keyframes buttonPulse {
+            0% { transform: scale(1); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); }
+            50% { transform: scale(1.02); box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3); }
+            100% { transform: scale(1); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); }
+        }
+
+        #confetti {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .confetti-piece {
+            position: absolute;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        @keyframes fall {
+            0% { transform: translateY(-100px) rotate(0deg); opacity: 0; }
+            20% { opacity: 1; }
+            100% { transform: translateY(calc(100% + 50px)) rotate(720deg); opacity: 0; }
+        }
+        /* CSS Sonu */
+    </style>
+    <script src="https://s0.2mdn.net/ads/studio/Enabler.js"></script>
+</head>
+<body>
+    <div id="game-container">
+        <div id="game-area">
+            <div id="basket"></div>
+            <div id="score">Toplanan: 0/5</div>
+        </div>
+
+        <!-- BU KISIMLAR ARTIK #game-container İÇİNDE -->
+        <div id="start-screen" class="screen active">
+            <h1>Schafer ile Mutfakta Ustalık!</h1>
+            <p>Yukarıdan düşen Schafer ürünlerini sepetinle topla!</p>
+            <button id="start-button">OYUNA BAŞLA</button>
+        </div>
+
+        <div id="end-screen" class="screen">
+            <h1>Tebrikler!</h1>
+            <p>5 Schafer ürününü başarıyla topladın!</p>
+            <div id="confetti"></div>
+            <a href="#" id="visit-site-button">İNDİRİMİ YAKALA</a>
+        </div>
+    </div>
+
+    <script>
+        // JavaScript Başlangıcı
+
+        // Enabler'ın hazır olup olmadığını kontrol eden fonksiyon
+        function checkEnablerAndInitGame() {
+            if (typeof Enabler !== 'undefined' && Enabler.isInitialized()) {
+                console.log("GWD Enabler hazır, initGame çağrılıyor.");
+                initGame();
+            } else if (typeof Enabler !== 'undefined') {
+                console.log("GWD Enabler bekleniyor... INIT olayına abone olundu.");
+                Enabler.addEventListener(studio.events.StudioEvent.INIT, initGame);
+            } else {
+                console.log("GWD ortamında değil, DOMContentLoaded bekleniyor.");
+                document.addEventListener('DOMContentLoaded', initGame);
+            }
+        }
+
+        checkEnablerAndInitGame();
+
+
+        function initGame() {
+            if (window.gameInitialized) {
+                console.log("Oyun zaten başlatılmış.");
+                return;
+            }
+            window.gameInitialized = true;
+
+            console.log("initGame başlatıldı!");
+
+            const gameArea = document.getElementById('game-area');
+            const basket = document.getElementById('basket');
+            const scoreDisplay = document.getElementById('score');
+            const startScreen = document.getElementById('start-screen');
+            const endScreen = document.getElementById('end-screen');
+            const startButton = document.getElementById('start-button');
+            const visitSiteButton = document.getElementById('visit-site-button');
+            const confettiContainer = document.getElementById('confetti');
+
+            if (!startButton || !basket || !scoreDisplay || !startScreen || !endScreen || !visitSiteButton || !confettiContainer) {
+                console.error("HATA: Gerekli DOM elementlerinden biri bulunamadı! Oyun başlatılamıyor.");
+                if (!startButton) console.error("Missing: #start-button");
+                if (!basket) console.error("Missing: #basket");
+                if (!scoreDisplay) console.error("Missing: #score");
+                if (!startScreen) console.error("Missing: #start-screen");
+                if (!endScreen) console.error("Missing: #end-screen");
+                if (!visitSiteButton) console.error("Missing: #visit-site-button");
+                if (!confettiContainer) console.error("Missing: #confetti");
+                return;
+            }
+
+            const gameWidth = gameArea.offsetWidth;
+            const gameHeight = gameArea.offsetHeight;
+
+            let basketPosition = gameWidth / 2 - basket.offsetWidth / 2;
+            let collectedItems = 0;
+            let gameInterval;
+            let itemDropInterval;
+            const itemTypes = ['plate', 'cup', 'pot'];
+            let fallingItems = [];
+
+            const itemSpeedMin = 2;
+            const itemSpeedMax = 4;
+            const itemDropFrequency = 1000;
+
+            basket.style.left = `${basketPosition}px`;
+
+            gameArea.addEventListener('mousemove', (e) => {
+                if (startScreen.classList.contains('active') || endScreen.classList.contains('active')) {
+                    return;
+                }
+                let gameAreaRect = gameArea.getBoundingClientRect();
+                let newBasketX = e.clientX - gameAreaRect.left - basket.offsetWidth / 2;
+
+                if (newBasketX < 0) {
+                    newBasketX = 0;
+                } else if (newBasketX > gameWidth - basket.offsetWidth) {
+                    newBasketX = gameWidth - basket.offsetWidth;
+                }
+                basket.style.left = `${newBasketX}px`;
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (startScreen.classList.contains('active') || endScreen.classList.contains('active')) {
+                    return;
+                }
+                let moveAmount = 20;
+                let currentBasketLeft = parseInt(basket.style.left);
+
+                if (e.key === 'ArrowLeft') {
+                    currentBasketLeft -= moveAmount;
+                }
+                else if (e.key === 'ArrowRight') {
+                    currentBasketLeft += moveAmount;
+                }
+
+                if (currentBasketLeft < 0) {
+                    currentBasketLeft = 0;
+                }
+                else if (currentBasketLeft > gameWidth - basket.offsetWidth) {
+                    currentBasketLeft = gameWidth - basket.offsetWidth;
+                }
+                basket.style.left = `${currentBasketLeft}px`;
+            });
+
+            function createFallingItem() {
+                const itemType = itemTypes[Math.floor(Math.random() * itemTypes.length)];
+                console.log("Yeni öğe oluşturuluyor:", itemType);
+                const item = document.createElement('div');
+                item.classList.add('falling-item', itemType);
+                item.style.left = `${Math.random() * (gameWidth - 40)}px`;
+                item.style.top = '-50px';
+                gameArea.appendChild(item);
+                fallingItems.push({ element: item, speed: itemSpeedMin + Math.random() * (itemSpeedMax - itemSpeedMin) });
+            }
+
+            function gameLoop() {
+                for (let i = fallingItems.length - 1; i >= 0; i--) {
+                    const itemObj = fallingItems[i];
+                    const item = itemObj.element;
+                    const currentTop = parseFloat(item.style.top);
+
+                    if (isNaN(currentTop)) {
+                        console.error("HATA: Falling item'ın top değeri NaN. Öğenin kaldırılması.");
+                        item.remove();
+                        fallingItems.splice(i, 1);
+                        continue;
+                    }
+
+                    item.style.top = `${currentTop + itemObj.speed}px`;
+
+                    if (isColliding(basket, item)) {
+                        collectedItems++;
+                        scoreDisplay.textContent = `Toplanan: ${collectedItems}/5`;
+                        item.remove();
+                        fallingItems.splice(i, 1);
+
+                        if (collectedItems >= 5) {
+                            endGame(true);
+                        }
+                    } else if (currentTop > gameHeight) {
+                        item.remove();
+                        fallingItems.splice(i, 1);
+                    }
+                }
+            }
+
+            function isColliding(element1, element2) {
+                const rect1 = element1.getBoundingClientRect();
+                const rect2 = element2.getBoundingClientRect();
+
+                return !(
+                    rect1.top + rect1.height < rect2.top ||
+                    rect1.top > rect2.top + rect2.height ||
+                    rect1.left + rect1.width < rect2.left ||
+                    rect1.left > rect2.left + rect2.width
+                );
+            }
+
+            function triggerConfetti() {
+                confettiContainer.innerHTML = '';
+                const colors = ['#DA251C', '#FF0000', '#CD5C5C', '#A52A2A', '#8B0000']; 
+
+                for (let i = 0; i < 70; i++) {
+                    const piece = document.createElement('div');
+                    piece.classList.add('confetti-piece');
+                    piece.style.width = `${Math.random() * 10 + 5}px`;
+                    piece.style.height = `${Math.random() * 10 + 5}px`;
+                    piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    piece.style.left = `${Math.random() * 100}%`;
+                    piece.style.top = `${Math.random() * 50}px`; 
+                    piece.style.transform = `rotate(${Math.random() * 360}deg)`;
+                    piece.style.animation = `fall ${Math.random() * 2 + 1.5}s linear forwards`;
+                    piece.style.animationDelay = `${Math.random() * 0.7}s`;
+                    confettiContainer.appendChild(piece);
+                }
+
+                setTimeout(() => {
+                    confettiContainer.innerHTML = '';
+                }, 3500);
+            }
+
+            function startGame() {
+                console.log("Oyun Başlatıldı!");
+                collectedItems = 0;
+                scoreDisplay.textContent = `Toplanan: 0/5`;
+
+                fallingItems.forEach(item => item.element.remove());
+                fallingItems = [];
+
+                startScreen.classList.remove('active');
+                endScreen.classList.remove('active');
+
+                gameInterval = setInterval(gameLoop, 1000 / 60);
+                itemDropInterval = setInterval(createFallingItem, itemDropFrequency);
+            }
+
+            function endGame(win) {
+                clearInterval(gameInterval);
+                clearInterval(itemDropInterval);
+
+                endScreen.classList.add('active');
+                if (win) {
+                    triggerConfetti();
+                }
+                // GWD'de "GameCompleteExit" adında bir çıkış tanımlıysa bu çağrı onu tetikleyebilir.
+                // Eğer iframe içinden dışarı çıkış beklenmiyorsa bu satırı silebilirsiniz.
+                if (typeof Enabler !== 'undefined' && Enabler.isInitialized()) {
+                    Enabler.exit("GameCompleteExit"); 
+                }
+            }
+
+            startButton.addEventListener('click', startGame);
+            
+            // BURADA DEĞİŞİKLİK YAPILDI: iframe'den ana belgeye mesaj gönderiliyor
+            visitSiteButton.addEventListener('click', (e) => {
+                e.preventDefault(); // Varsayılan bağlantı davranışını engelle
+                console.log("İndirimi Yakala butonu iframe içinde tıklandı. Ana belgeye mesaj gönderiliyor...");
+                // Ana belgeye "triggerExitSchafer" mesajını gönder
+                // '*' yerine ana belgenin domain'ini yazmak güvenlik için daha iyidir, ancak reklam ortamında '*' genelde sorun çıkarmaz.
+                window.parent.postMessage('triggerExitSchafer', '*'); 
+            });
+        }
+    </script>
+</body>
+</html>

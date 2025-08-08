@@ -1,0 +1,20 @@
+[
+  {
+    "icon": "📱",
+    "title": "Phone",
+    "details": "+90 506 487 84 58",
+    "link": "tel:+90 506 487 84 58"
+  },
+  {
+    "icon": "✉️",
+    "title": "Email",
+    "details": "affiliate@appective.net",
+    "link": "mailto:affiliate@appective.net"
+  },
+  {
+    "icon": "📍",
+    "title": "Address",
+    "details": "Appective Medya ve Ticaret Limited Şirketi, Istanbul / Turkey",
+    "link": "https://www.google.com.tr/maps/place/Appective+Medya+ve+Ticaret+Limited+%C5%9Eirketi/@41.0186543,29.1095339,17z/data=!3m1!4b1!4m6!3m5!1s0x14cac96e8b84d1d1:0x40132daec5198e69!8m2!3d41.0186543!4d29.1121088!16s%2Fg%2F11vbv05t1_?entry=ttu"
+  }
+]

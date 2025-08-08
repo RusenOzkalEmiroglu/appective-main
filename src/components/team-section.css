@@ -1,0 +1,27 @@
+/* Hide scrollbar but keep functionality */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+/* Add smooth scrolling */
+.snap-x {
+  scroll-behavior: smooth;
+}
+
+/* Center the scrollable container */
+.team-container {
+  padding-left: calc(50% - 32rem);
+  padding-right: calc(50% - 32rem);
+}
+
+@media (max-width: 1024px) {
+  .team-container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}

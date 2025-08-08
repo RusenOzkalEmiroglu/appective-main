@@ -1,0 +1,68 @@
+import { ServiceCategory } from '@/types/service';
+
+export const serviceCategoriesData: ServiceCategory[] = [
+  {
+    "id": "cpi",
+    "name": "CPI",
+    "description": "Cost Per Install - Mobile app promotion strategy focused on acquiring new users through app installations.",
+    "folderName": "01_Cpi",
+    "icon": "📱",
+    "imageUrl": "/images/services/preview-e458e91be2ae0bec.png"
+  },
+  {
+    "id": "cpa",
+    "name": "CPA",
+    "description": "Cost Per Action - Performance-based advertising model where payment is based on specific actions taken.",
+    "folderName": "02_Cpa",
+    "icon": "🎯",
+    "imageUrl": "/images/services/preview-358c328cd09533e9.png"
+  },
+  {
+    "id": "richmedia",
+    "name": "Rich Media",
+    "description": "Interactive digital advertising with advanced features like video, audio, or other elements that encourage viewers to engage.",
+    "folderName": "03_RichMedia",
+    "icon": "🎬",
+    "imageUrl": "/images/services/preview-b38ca71aaa92dc1c.png"
+  },
+  {
+    "id": "advergame",
+    "name": "AdverGame",
+    "description": "Promotional games that incorporate advertising messages, brands, or products as part of the gaming experience.",
+    "folderName": "04_AdverGame",
+    "icon": "🎮",
+    "imageUrl": "/images/services/preview-7b8bbf6b76595d50.png"
+  },
+  {
+    "id": "locationbasedmarketing",
+    "name": "Location Based Marketing",
+    "description": "Marketing strategy that uses a mobile device's location to alert app users of nearby deals or promotions.",
+    "folderName": "05_LocationBasedMarketing",
+    "icon": "📍",
+    "imageUrl": "/images/services/preview-6ee358ecb3ed9a74.png"
+  },
+  {
+    "id": "standarddisplay",
+    "name": "Standard Display",
+    "description": "Traditional digital advertising formats such as banners, pop-ups, and other visual advertisements on websites.",
+    "folderName": "06_StandartDisplay",
+    "icon": "🖼️",
+    "imageUrl": "/images/services/preview-ca8031c8d26e7e07.png"
+  },
+  {
+    "id": "videoadvertising",
+    "name": "Video Advertising",
+    "description": "Video advertising content distributed through digital platforms and social media channels.",
+    "folderName": "07_VideoAdvertising",
+    "icon": "▶️",
+    "imageUrl": "/images/services/preview-e53603074c346c4c.png"
+  },
+  {
+    "id": "influencermarketing",
+    "name": "Online Video",
+    "description": "Collaborating with influential individuals to promote products or services to their audience.",
+    "folderName": "08_InfluencerMarketing",
+    "icon": "✨",
+    "imageUrl": "/images/services/preview-bfa2acc11bf88d09.png"
+  }
+];

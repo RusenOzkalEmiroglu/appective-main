@@ -1,0 +1,393 @@
+@import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Montserrat:wght@400;700&display=swap');
+
+:root {
+    --primary-bg: #05020D;
+    --accent-orange: #FF6B3B;
+    --accent-yellow: #FFD166;
+    --glow-color: rgba(255, 165, 0, 0.7);
+    --text-color: #F0F0F0;
+    --glass-bg: rgba(255, 255, 255, 0.1);
+}
+
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    font-family: 'Poppins', sans-serif;
+    overflow: hidden;
+    background-color: var(--primary-bg);
+}
+
+.ad-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.ad-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.container {
+    width: 100%;
+    height: 100%;
+    background: url('arkaplan.png') no-repeat center center/cover;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2vw;
+    box-sizing: border-box;
+    position: relative;
+    color: var(--light-text);
+}
+
+header {
+    width: 100%;
+    text-align: center;
+    margin-top: 2vh;
+}
+
+.title-container h1, .title-container h2 {
+    font-family: 'Luckiest Guy', cursive;
+    margin: 0;
+    line-height: 1.1;
+    text-shadow: 0 0 10px var(--glow-color), 0 0 20px var(--accent-orange), 0 0 35px rgba(0,0,0,0.7);
+}
+
+.title-container h1 {
+    font-family: 'Pacifico', cursive;
+    font-size: 5.5vw; /* Adjusted for new font */
+    color: #FFFFFF;
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.6);
+}
+.title-container h2 {
+    font-size: 3vw;
+    color: #f0f0f0;
+}
+
+.buttons-container {
+    margin-top: 2vh;
+}
+
+.buttons-container button {
+    background: linear-gradient(45deg, var(--accent-orange), var(--accent-yellow));
+    border: none;
+    color: #ffffff;
+    padding: 12px 25px;
+    margin: 0 10px;
+    border-radius: 50px;
+    font-size: 1.1vw;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+}
+
+.buttons-container button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+    filter: brightness(1.1);
+}
+
+main {
+    width: 90%;
+    margin: auto 0;
+}
+
+.timeline-container {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 15px 30px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.timeline {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    /* border-bottom: 2px solid rgba(255, 255, 255, 0.5); */ /* Removed as requested */
+    padding-bottom: 10px;
+}
+
+.month-container {
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.1vw;
+    position: relative;
+    color: #ffffff;
+    text-shadow: 1px 1px 4px rgba(0,0,0,0.6);
+}
+
+.month-holidays {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-top: 25px;
+}
+
+.holiday-marker {
+    cursor: pointer;
+    text-align: center;
+    width: 50px;
+    transition: transform 0.3s ease;
+    position: relative;
+}
+
+.holiday-marker:hover { 
+    transform: scale(1.1); 
+}
+
+/* Connector line from month name to marker */
+.holiday-marker::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 100%;
+    height: 25px;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--accent-yellow), transparent);
+}
+
+.holiday-marker .icon {
+    width: 15px;
+    height: 15px;
+    background: var(--accent-yellow);
+    border-radius: 50%;
+    margin: 0 auto 8px auto;
+    position: relative;
+    box-shadow: 0 0 15px var(--glow-color), 0 0 20px var(--glow-color);
+}
+
+.holiday-marker .name {
+    font-size: 0.9vw;
+    font-weight: 700;
+    margin-top: 8px;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+    line-height: 1.2;
+    color: #ffffff;
+}
+
+/* Custom Tooltip */
+.holiday-marker[data-tooltip] {
+    position: relative;
+}
+
+.holiday-marker[data-tooltip]::before,
+.holiday-marker[data-tooltip]::after {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    z-index: 10;
+}
+
+.holiday-marker[data-tooltip]::before {
+    content: attr(data-tooltip);
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-size: 14px;
+    white-space: nowrap;
+    bottom: 100%;
+    margin-bottom: 10px;
+}
+
+.holiday-marker[data-tooltip]::after {
+    content: '';
+    border: 5px solid transparent;
+    border-top-color: rgba(0, 0, 0, 0.85);
+    bottom: 100%;
+    margin-bottom: 0px;
+}
+
+.holiday-marker[data-tooltip]:hover::before,
+.holiday-marker[data-tooltip]:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-5px);
+}
+
+footer {
+    padding: 1vw 4vw 0 4vw;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+.countdown-container {
+    text-align: center;
+    text-shadow: 1px 1px 5px rgba(0,0,0,0.5);
+}
+
+.countdown-text {
+    font-size: 1.8vw;
+    margin-bottom: 5px;
+    font-family: 'Luckiest Guy', cursive;
+    letter-spacing: 2px;
+    color: #fff;
+    text-shadow: 0 0 5px #fff, 0 0 10px var(--glow-color), 0 0 15px var(--glow-color);
+}
+
+.countdown {
+    font-family: 'Luckiest Guy', cursive;
+    font-size: 4.8vw;
+    color: var(--text-color);
+    line-height: 1;
+    text-shadow: 0 0 10px var(--glow-color), 0 0 20px var(--accent-orange);
+}
+
+.countdown span {
+    margin-right: 10px;
+}
+
+.top-logo {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 15vw;
+    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+    z-index: 10;
+}
+
+.reklam-gec {
+    position: absolute;
+    top: 50%;
+    right: 20px;
+    transform: translateY(-50%);
+    background-color: rgba(0,0,0,0.5);
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 0.9vw;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: var(--text-color);
+    z-index: 10;
+}
+.reklam-gec:hover { 
+    background-color: rgba(0,0,0,0.8);
+    transform: translateY(-50%) scale(1.05);
+}
+
+/* Pop-up Stilleri */
+.popup-container {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    background-color: rgba(0,0,0,0.5);
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.popup-content {
+    background: rgba(10, 0, 20, 0.85);
+    border-radius: 15px;
+    width: 70vw;
+    max-width: 800px;
+    position: relative;
+    border: 2px solid var(--accent-orange);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 40px rgba(255, 107, 59, 0.7);
+    display: flex;
+    overflow: hidden;
+}
+
+.close-btn {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 35px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+.close-btn:hover { transform: scale(1.2); }
+
+.popup-content h3 {
+    font-family: 'Luckiest Guy', cursive;
+    font-size: 2.5em;
+    color: var(--accent-yellow);
+    text-shadow: 0 0 8px var(--glow-color);
+    margin-top: 0;
+}
+
+.popup-image-container {
+    flex: 1.2;
+}
+
+#popup-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.popup-details {
+    flex: 1;
+    padding: 30px 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.popup-button {
+    background: linear-gradient(45deg, var(--accent-orange), var(--accent-yellow));
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 50px;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.popup-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(255, 165, 0, 0.5);
+}
+
+.hotels-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.hotels-grid img {
+    width: 100%;
+    height: 130px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.hotels-grid img:hover {
+    transform: scale(1.05);
+    border-color: var(--accent-yellow);
+    box-shadow: 0 0 15px var(--glow-color);
+}

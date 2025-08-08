@@ -164,22 +164,31 @@ const WorkShowcase = () => {
   useEffect(() => {
     if (!projectsContainerRef.current) return;
     
-    const tl = gsap.timeline();
-    
-    tl.fromTo(
-      '.project-card',
-      { 
-        y: 50,
-        opacity: 0,
-      },
-      {
-        y: 0,
-        opacity: 1,
-        duration: 0.8,
-        stagger: 0.1,
-        ease: 'power3.out',
+    // Wait for DOM elements to be available
+    const timer = setTimeout(() => {
+      const projectCards = projectsContainerRef.current?.querySelectorAll('.project-card');
+      
+      if (projectCards && projectCards.length > 0) {
+        const tl = gsap.timeline();
+        
+        tl.fromTo(
+          projectCards,
+          { 
+            y: 50,
+            opacity: 0,
+          },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.8,
+            stagger: 0.1,
+            ease: 'power3.out',
+          }
+        );
       }
-    );
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, [activeCategory]);
 
   const openProjectDetails = (project: Project) => {

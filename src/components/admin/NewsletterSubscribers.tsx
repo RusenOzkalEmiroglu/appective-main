@@ -11,7 +11,7 @@ interface Subscriber {
 
 const NewsletterSubscribers = () => {
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSubscribers, setSelectedSubscribers] = useState<string[]>([]);
@@ -23,10 +23,12 @@ const NewsletterSubscribers = () => {
     setLoading(true);
     setError(null);
     try {
-      // Since we're using Vercel with read-only filesystem,
-      // we'll show a message about data persistence
-      setSubscribers([]);
-      setError('Newsletter subscriptions are working, but data is not persisted in this demo version. In production, this would connect to a database.');
+      const response = await fetch('/api/newsletter');
+      if (!response.ok) {
+        throw new Error('Failed to fetch subscribers');
+      }
+      const data = await response.json();
+      setSubscribers(data.subscribers || []);
     } catch (err) {
       setError('Failed to load subscribers. Please try again.');
       console.error('Error fetching subscribers:', err);
@@ -158,21 +160,8 @@ const NewsletterSubscribers = () => {
       </div>
 
       {error && (
-        <div className="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative mb-4" role="alert">
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-blue-800">Newsletter Subscription Info</h3>
-              <div className="mt-2 text-sm text-blue-700">
-                <p>Newsletter subscriptions are working correctly! Emails are being validated and processed.</p>
-                <p className="mt-1">In this demo version, subscriber data is not persisted. In production, this would connect to a database to store and display subscriber information.</p>
-              </div>
-            </div>
-          </div>
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+          <span className="block sm:inline">{error}</span>
         </div>
       )}
 

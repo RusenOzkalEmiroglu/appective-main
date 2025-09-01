@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth';
 interface AuthContextType {
   isAuthenticated: boolean;
   isAdmin: boolean;
-  user: any;
+  user: any | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<any>;
   signOut: () => Promise<void>;
@@ -25,7 +25,7 @@ export const useAuthContext = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   
   const { signIn: authSignIn, signOut: authSignOut, checkAuth, getSavedSession, saveSession, clearSession } = useAuth();

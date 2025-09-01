@@ -5,6 +5,7 @@ import { WebPortalItem, initialWebPortalItems as fallbackData } from '@/data/web
 import WebPortalForm from '@/components/admin/WebPortalForm';
 import { PlusCircle, Edit3, Trash2, Search, AlertTriangle } from 'lucide-react';
 import { pageTitleClasses, cardClasses, primaryButtonClasses, secondaryButtonClasses, inputBaseClasses, inputBorderClasses, primaryTextColor, secondaryTextColor, tableHeaderClasses, tableCellClasses, iconButtonClasses } from '@/app/utils/constants';
+import { fetchWithAuth } from '@/lib/auth';
 
 const AdminWebPortalPage = () => {
   const [items, setItems] = useState<WebPortalItem[]>([]);
@@ -13,12 +14,12 @@ const AdminWebPortalPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<WebPortalItem | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [deletingItemId, setDeletingItemId] = useState<number | null>(null);
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
 
   const fetchItems = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/web-portals');
+      const response = await fetchWithAuth('/api/web-portals');
       if (!response.ok) {
         throw new Error('Failed to fetch web portal items');
       }
@@ -38,28 +39,20 @@ const AdminWebPortalPage = () => {
   }, [fetchItems]);
 
   const handleFormSubmit = async (itemData: Omit<WebPortalItem, 'id'> & { id?: number }) => {
-    const currentItems = [...items];
-    let updatedItems;
-
-    if (itemData.id) { // Editing
-      updatedItems = currentItems.map(p => p.id === itemData.id ? { ...p, ...itemData } as WebPortalItem : p);
-    } else { // Adding
-      const newItemId = currentItems.length > 0 ? Math.max(...currentItems.map(p => p.id)) + 1 : 1;
-      const newItem = { ...itemData, id: newItemId } as WebPortalItem;
-      updatedItems = [...currentItems, newItem];
-    }
-
     try {
-      const response = await fetch('/api/web-portals', {
+      // Send single item to API instead of bulk update
+      const response = await fetchWithAuth('/api/web-portals', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedItems),
+        body: JSON.stringify(itemData),
       });
+      
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to save data');
       }
-      setItems(updatedItems);
+
+      // Refresh data from server after successful save
+      await fetchItems();
       setShowForm(false);
       setEditingItem(null);
       setError(null);
@@ -75,22 +68,22 @@ const AdminWebPortalPage = () => {
   };
 
   const handleDeleteClick = (itemId: number) => {
-    setDeletingItemId(itemId);
+    setDeletingItemId(itemId.toString());
   };
 
   const confirmDelete = async () => {
     if (deletingItemId === null) return;
 
-    const updatedItems = items.filter(p => p.id !== deletingItemId);
     try {
-      const response = await fetch('/api/web-portals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedItems),
+      const response = await fetchWithAuth(`/api/web-portals?id=${deletingItemId}`, {
+        method: 'DELETE',
       });
       if (!response.ok) {
         throw new Error('Failed to delete item from server');
       }
+      
+      // Remove item from local state
+      const updatedItems = items.filter(p => p.id.toString() !== deletingItemId);
       setItems(updatedItems);
       setError(null);
     } catch (err) {

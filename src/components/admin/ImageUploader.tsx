@@ -62,8 +62,17 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
       formData.append('type', type);
       formData.append('isZip', isZipUpload ? 'true' : 'false');
 
+      // Get auth token from localStorage
+      const token = localStorage.getItem('supabase_auth_token');
+      
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch('/api/upload', {
         method: 'POST',
+        headers,
         body: formData,
       });
 

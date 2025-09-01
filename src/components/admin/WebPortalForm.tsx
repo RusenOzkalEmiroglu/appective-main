@@ -19,6 +19,7 @@ const WebPortalForm: React.FC<WebPortalFormProps> = ({ onSubmit, onCancel, initi
     image: '',
     projectUrl: '',
   });
+  const [imageError, setImageError] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialData) {
@@ -48,10 +49,18 @@ const WebPortalForm: React.FC<WebPortalFormProps> = ({ onSubmit, onCancel, initi
 
   const handleImageUploaded = (url: string) => {
     setFormData(prev => ({ ...prev, image: url }));
+    setImageError(null); // Clear error when image is uploaded
   };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
+    
+    // Validate that image is uploaded
+    if (!formData.image || formData.image.trim() === '') {
+      setImageError('Lütfen bir resim yükleyin.');
+      return;
+    }
+    
     onSubmit(formData);
   };
 
@@ -88,15 +97,20 @@ const WebPortalForm: React.FC<WebPortalFormProps> = ({ onSubmit, onCancel, initi
           />
         </div>
 
-        <div>
-          <label className={`block text-sm font-medium ${secondaryTextColor}`}>Image</label>
+        <div className="space-y-2">
+          <label className={`block text-sm font-medium ${secondaryTextColor}`}>
+            Project Image
+          </label>
           <ImageUploader
-            currentImagePath={formData.image}
             onImageUploaded={handleImageUploaded}
             category="web-portals"
-            brand={formData.title.replace(/\s+/g, '-').toLowerCase() || 'new-portal'}
+            brand="web-portals"
             type="preview"
+            currentImagePath={formData.image}
           />
+          {imageError && (
+            <p className="text-red-500 text-sm mt-1">{imageError}</p>
+          )}
         </div>
 
         <div>

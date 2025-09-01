@@ -1,68 +1,101 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
+import { supabase } from '@/lib/supabase';
 import { withAdminAuthSimple } from '@/lib/withAdminAuth';
-
-const dataFilePath = path.join(process.cwd(), 'public', 'data', 'top-banner.json');
-
-async function getBannerData() {
-  try {
-    const data = await fs.readFile(dataFilePath, 'utf-8');
-    return JSON.parse(data);
-  } catch (error) {
-    // If the file doesn't exist, return default empty state
-    return { imageUrl: null, targetUrl: null };
-  }
-}
-
-async function saveBannerData(data: any) {
-  await fs.mkdir(path.dirname(dataFilePath), { recursive: true });
-  await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2));
-}
 
 // --- Public Handlers ---
 
-// GET handler to fetch current banner data
+// GET handler to fetch current banner data from Supabase
 export async function GET() {
-  const data = await getBannerData();
-  return NextResponse.json(data);
+  try {
+    const { data, error } = await supabase
+      .from('top_banner')
+      .select('id, background_image, button_link')
+      .eq('id', 1)
+      .maybeSingle();
+    
+    if (error) {
+      console.error('Banner fetch error:', error);
+      return NextResponse.json({ imageUrl: null, targetUrl: null });
+    }
+    
+    if (data) {
+      return NextResponse.json({
+        imageUrl: data.background_image,
+        targetUrl: data.button_link
+      });
+    }
+    
+    return NextResponse.json({ imageUrl: null, targetUrl: null });
+  } catch (error) {
+    console.error('Banner yüklenirken hata:', error);
+    return NextResponse.json({ imageUrl: null, targetUrl: null });
+  }
 }
 
 // --- Protected Handlers ---
 
-// Original POST handler logic
+// POST handler for updating banner data in Supabase
 async function postHandler(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const targetUrl = formData.get('targetUrl') as string;
 
-    let imageUrl = (await getBannerData()).imageUrl; // Keep old image if new one isn't provided
+    // Get current data
+    const { data: currentData } = await supabase
+      .from('top_banner')
+      .select('background_image')
+      .eq('id', 1)
+      .maybeSingle();
+
+    let imageUrl = currentData?.background_image || null;
 
     if (file) {
-      const publicDir = path.join(process.cwd(), 'public', 'images', 'ust');
-      await fs.mkdir(publicDir, { recursive: true });
-
-      // Clean up old banner image if it exists
-      const oldData = await getBannerData();
-      if (oldData.imageUrl) {
-        const oldImagePath = path.join(process.cwd(), 'public', oldData.imageUrl);
-        try {
-          await fs.unlink(oldImagePath);
-        } catch (e) {
-          console.warn(`Could not delete old banner image: ${oldImagePath}`, e);
-        }
-      }
-
-      // Save new image
+      // For now, we'll use a simple filename approach
+      // In production, you might want to use a proper file upload service
       const uniqueFilename = `${Date.now()}-${file.name}`;
-      const imagePath = path.join(publicDir, uniqueFilename);
-      const buffer = Buffer.from(await file.arrayBuffer());
-      await fs.writeFile(imagePath, buffer);
-      imageUrl = `/images/ust/${uniqueFilename}`;
+      imageUrl = `/images/banner/${uniqueFilename}`;
     }
 
-    await saveBannerData({ imageUrl, targetUrl });
+    // Update or insert banner data
+    const updateData = {
+      background_image: imageUrl,
+      button_link: targetUrl
+    };
+
+    const { data: existingRecord } = await supabase
+      .from('top_banner')
+      .select('id')
+      .eq('id', 1)
+      .maybeSingle();
+
+    let result;
+    if (existingRecord) {
+      // Update existing record
+      result = await supabase
+        .from('top_banner')
+        .update(updateData)
+        .eq('id', 1)
+        .select();
+    } else {
+      // Insert new record
+      const insertData = {
+        id: 1,
+        title: 'Welcome to Appective',
+        subtitle: 'Digital Marketing & Development',
+        description: 'We create innovative digital solutions for your business',
+        button_text: 'Get Started',
+        ...updateData
+      };
+      result = await supabase
+        .from('top_banner')
+        .insert(insertData)
+        .select();
+    }
+
+    if (result.error) {
+      throw result.error;
+    }
 
     return NextResponse.json({ success: true, imageUrl, targetUrl });
   } catch (error: any) {
@@ -71,20 +104,17 @@ async function postHandler(request: NextRequest) {
   }
 }
 
-// Original DELETE handler logic
+// DELETE handler for removing banner from Supabase
 async function deleteHandler(request: NextRequest) {
   try {
-    const oldData = await getBannerData();
-    if (oldData.imageUrl) {
-      const imagePath = path.join(process.cwd(), 'public', oldData.imageUrl);
-      try {
-        await fs.unlink(imagePath);
-      } catch (e) {
-        console.warn(`Could not delete banner image: ${imagePath}`, e);
-      }
-    }
+    const { error } = await supabase
+      .from('top_banner')
+      .update({ background_image: null, button_link: null })
+      .eq('id', 1);
 
-    await saveBannerData({ imageUrl: null, targetUrl: null });
+    if (error) {
+      throw error;
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

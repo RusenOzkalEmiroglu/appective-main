@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { motion, useAnimation } from 'framer-motion';
 import { useInView } from 'framer-motion';
 import Image from 'next/image';
-import teamMembers from '@/data/teamMembers';
+import { TeamMember } from '@/lib/supabase';
 import './team-section.css';
 
 const TeamSection = () => {
@@ -12,12 +12,45 @@ const TeamSection = () => {
   const isInView = useInView(sectionRef, { once: false, amount: 0.2 });
   const controls = useAnimation();
   const [activeTeamMember, setActiveTeamMember] = useState<number | null>(null);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTeamMembers = async () => {
+      try {
+        const response = await fetch('/api/team-members');
+        if (response.ok) {
+          const data = await response.json();
+          setTeamMembers(data);
+        }
+      } catch (error) {
+        console.error('Error fetching team members:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTeamMembers();
+  }, []);
 
   useEffect(() => {
     if (isInView) {
       controls.start('visible');
     }
   }, [isInView, controls]);
+
+  if (loading) {
+    return (
+      <div id="team" ref={sectionRef} className="py-16">
+        <div className="text-center">
+          <h3 className="text-2xl md:text-3xl font-bold mb-10 text-center">Meet Our <span className="gradient-text">Team</span></h3>
+          <div className="flex justify-center items-center h-32">
+            <div className="text-white/70">Loading team members...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div id="team" ref={sectionRef} className="py-16">
@@ -40,11 +73,11 @@ const TeamSection = () => {
         <h3 className="text-2xl md:text-3xl font-bold mb-10 text-center">Meet Our <span className="gradient-text">Team</span></h3>
         
         <div className="flex justify-center">
-          <div className="flex space-x-4 max-w-full">
-            {teamMembers.map((member, index) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 max-w-full auto-rows-fr">
+            {teamMembers.map((member: TeamMember, index: number) => (
               <motion.div
                 key={member.id}
-                className="group relative overflow-hidden rounded-xl bg-dark/30 backdrop-blur-sm border border-white/10 flex-shrink-0 w-32 md:w-36"
+                className="group relative overflow-hidden rounded-xl bg-dark/30 backdrop-blur-sm border border-white/10 w-full h-40 sm:h-44 md:h-48 lg:h-52 flex flex-col"
                 initial="hidden"
                 animate={controls}
                 variants={{
@@ -68,19 +101,19 @@ const TeamSection = () => {
                 onMouseEnter={() => setActiveTeamMember(member.id)}
                 onMouseLeave={() => setActiveTeamMember(null)}
               >
-                <div className="relative w-full" style={{ aspectRatio: '0.9/1' }}>
+                <div className="relative w-full flex-1">
                   <Image 
                     src={member.image}
                     alt={member.name}
                     fill
-                    sizes="(max-width: 640px) 8rem, 9rem"
+                    sizes="(max-width: 640px) 8rem, (max-width: 768px) 10rem, (max-width: 1024px) 12rem, 14rem"
                     className="object-cover object-center transition-transform duration-700 group-hover:scale-110"
                   />
                 </div>
                 
-                <div className="p-2 bg-dark/70 backdrop-blur-sm">
-                  <h4 className="text-sm font-bold text-white leading-tight">{member.name}</h4>
-                  <p className="text-primary text-xs leading-tight mt-0.5">{member.position}</p>
+                <div className="p-2 bg-dark/70 backdrop-blur-sm flex-shrink-0 min-h-[3rem] flex flex-col justify-center">
+                  <h4 className="text-xs sm:text-sm font-bold text-white leading-tight truncate">{member.name}</h4>
+                  <p className="text-primary text-xs leading-tight mt-0.5 truncate">{member.position}</p>
                 </div>
                 
                 <motion.div 

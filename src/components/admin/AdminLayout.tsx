@@ -15,7 +15,8 @@ import {
   Share2, 
   Contact,
   Image,
-  FileText
+  FileText,
+  Users
 } from 'lucide-react';
 
 // Define colors based on Appective theme
@@ -63,6 +64,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeSection, onSe
     { name: 'Top Banner', path: 'top-banner', icon: <Image size={20} /> },
     { name: 'Our Services', path: 'our-services', icon: <Settings size={20} /> },
     { name: 'Partners', path: 'partners', icon: <Handshake size={20} /> },
+    { name: 'Team Members', path: 'team-members', icon: <Users size={20} /> },
     { name: 'Job Openings', path: 'job-openings', icon: <Briefcase size={20} /> },
     { name: 'Job Applications', path: 'job-applications', icon: <FileText size={20} /> },
     { name: 'Newsletter Subscribers', path: 'newsletter', icon: <Newspaper size={20} /> },
@@ -138,7 +140,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeSection, onSe
           </ul>
         </nav>
         <div className="p-4 border-t border-gray-700">
-          <SidebarItem icon={<Settings size={20} />} text="Settings" active={activeSection === 'settings'} onClick={() => onSectionChange('settings')} />
           <SidebarItem icon={<LogOut size={20} />} text="Logout" active={false} onClick={onLogout} />
         </div>
       </aside>

@@ -34,5 +34,17 @@
     "cvFilePath": "/uploads/cv/f1757d06-d91e-4feb-8f31-1bc31782a1da.pdf",
     "createdAt": "2025-06-26T07:46:57.881Z",
     "status": "pending"
+  },
+  {
+    "id": "ea82b027-3381-4681-ba65-eb304415b934",
+    "jobId": "1",
+    "jobTitle": "Junior Ad-Operations Specialist",
+    "fullName": "Ruşen Özkal Emiroğlu",
+    "email": "ozkal@appective.net",
+    "phone": "05012221088",
+    "message": "test başvurusu",
+    "cvFilePath": "/uploads/cv/52d9082b-ffc8-4085-b527-2e91cf1b576c.docx",
+    "createdAt": "2025-08-11T13:41:37.360Z",
+    "status": "pending"
   }
 ]

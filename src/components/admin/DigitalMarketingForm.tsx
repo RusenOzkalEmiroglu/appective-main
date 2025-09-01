@@ -18,6 +18,7 @@ const DigitalMarketingForm: React.FC<DigitalMarketingFormProps> = ({ onSubmit, o
   const [image, setImage] = useState('');
   const [services, setServices] = useState(''); // Comma-separated string
   const [projectUrl, setProjectUrl] = useState('');
+  const [imageError, setImageError] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialData) {
@@ -38,8 +39,20 @@ const DigitalMarketingForm: React.FC<DigitalMarketingFormProps> = ({ onSubmit, o
     }
   }, [initialData]);
 
+  const handleImageUploaded = (url: string) => {
+    setImage(url);
+    setImageError(null); // Clear error when image is uploaded
+  };
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
+    
+    // Validate that image is uploaded
+    if (!image || image.trim() === '') {
+      setImageError('Lütfen bir resim yükleyin.');
+      return;
+    }
+    
     const servicesArray = services.split(',').map(s => s.trim()).filter(s => s);
     const itemToSubmit = {
       title,
@@ -98,12 +111,15 @@ const DigitalMarketingForm: React.FC<DigitalMarketingFormProps> = ({ onSubmit, o
       <div>
         <label className={`block text-sm font-medium ${secondaryTextColor} mb-1`}>Preview Image</label>
         <ImageUploader 
-          onImageUploaded={(path) => setImage(path)}
+          onImageUploaded={handleImageUploaded}
           currentImagePath={image}
-          category="digital-marketing" // Or a more specific category if needed
+          category="digital-marketing"
           brand={client || title || 'dm-project'}
           type="preview"
         />
+        {imageError && (
+          <p className="text-red-500 text-sm mt-1">{imageError}</p>
+        )}
         {image && <p className={`text-xs ${secondaryTextColor} mt-1`}>Current image: {image}</p>}
       </div>
 

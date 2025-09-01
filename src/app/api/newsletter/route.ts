@@ -1,37 +1,24 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-
-// Path to the newsletter subscribers JSON file
-const dataFilePath = path.join(process.cwd(), 'src/data/newsletterSubscribers.json');
-
-// Ensure the data file exists
-const ensureDataFileExists = () => {
-  const dirPath = path.dirname(dataFilePath);
-  
-  // Create directory if it doesn't exist
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true });
-  }
-  
-  // Create file with empty array if it doesn't exist
-  if (!fs.existsSync(dataFilePath)) {
-    fs.writeFileSync(dataFilePath, JSON.stringify([], null, 2));
-  }
-};
-
-// Ensure the data file exists
-ensureDataFileExists();
+import { supabase } from '@/lib/supabase';
 
 // Get all subscribers
 export async function GET() {
   try {
-    ensureDataFileExists();
+    const { data, error } = await supabase
+      .from('newsletter_subscribers')
+      .select('*')
+      .order('subscribed_at', { ascending: false });
     
-    const data = fs.readFileSync(dataFilePath, 'utf8');
-    const subscribers = JSON.parse(data);
+    if (error) throw error;
     
-    return NextResponse.json({ subscribers }, { status: 200 });
+    // Format for compatibility with existing frontend
+    const formattedSubscribers = (data || []).map(sub => ({
+      id: sub.id.toString(),
+      email: sub.email,
+      subscribedAt: sub.subscribed_at
+    }));
+    
+    return NextResponse.json({ subscribers: formattedSubscribers }, { status: 200 });
   } catch (error) {
     console.error('Error reading newsletter subscribers:', error);
     return NextResponse.json(
@@ -44,47 +31,55 @@ export async function GET() {
 // Add a new subscriber
 export async function POST(request: Request) {
   try {
-    ensureDataFileExists();
-    
     const { email } = await request.json();
     
     // Validate email
     if (!email || !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
       return NextResponse.json(
-        { error: 'Invalid email address' },
+        { error: 'Geçersiz e-posta adresi' },
         { status: 400 }
       );
     }
     
-    // Read existing subscribers
-    const data = fs.readFileSync(dataFilePath, 'utf8');
-    const subscribers = JSON.parse(data);
-    
     // Check if email already exists
-    if (subscribers.some((sub: { email: string }) => sub.email === email)) {
+    const { data: existingSubscriber } = await supabase
+      .from('newsletter_subscribers')
+      .select('*')
+      .eq('email', email.toLowerCase())
+      .single();
+    
+    if (existingSubscriber) {
       return NextResponse.json(
-        { error: 'Email already subscribed' },
+        { error: 'Bu e-posta adresi zaten kayıtlı' },
         { status: 409 }
       );
     }
     
-    // Add new subscriber with timestamp
-    const newSubscriber = {
-      id: Date.now().toString(),
-      email,
-      subscribedAt: new Date().toISOString(),
-    };
+    // Create new subscriber
+    const { data: newSubscriber, error } = await supabase
+      .from('newsletter_subscribers')
+      .insert({
+        email: email.toLowerCase(),
+        subscribed_at: new Date().toISOString()
+      })
+      .select()
+      .single();
     
-    subscribers.push(newSubscriber);
+    if (error) throw error;
     
-    // Write back to file
-    fs.writeFileSync(dataFilePath, JSON.stringify(subscribers, null, 2));
+    return NextResponse.json({ 
+      success: true, 
+      subscriber: {
+        id: newSubscriber.id.toString(),
+        email: newSubscriber.email,
+        subscribedAt: newSubscriber.subscribed_at
+      }
+    }, { status: 201 });
     
-    return NextResponse.json({ success: true, subscriber: newSubscriber }, { status: 201 });
   } catch (error) {
-    console.error('Error adding newsletter subscriber:', error);
+    console.error('Newsletter abonelik hatası:', error);
     return NextResponse.json(
-      { error: 'Failed to add subscriber' },
+      { error: 'Abone eklenemedi' },
       { status: 500 }
     );
   }
@@ -93,40 +88,28 @@ export async function POST(request: Request) {
 // Delete a subscriber
 export async function DELETE(request: Request) {
   try {
-    ensureDataFileExists();
+    const { ids } = await request.json();
     
-    const { id } = await request.json();
-    
-    if (!id) {
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return NextResponse.json(
-        { error: 'Subscriber ID is required' },
+        { error: 'Abone ID\'leri gerekli' },
         { status: 400 }
       );
     }
     
-    // Read existing subscribers
-    const data = fs.readFileSync(dataFilePath, 'utf8');
-    const subscribers = JSON.parse(data);
+    // Delete subscribers
+    const { error } = await supabase
+      .from('newsletter_subscribers')
+      .delete()
+      .in('id', ids.map(id => parseInt(id)));
     
-    // Filter out the subscriber to delete
-    const updatedSubscribers = subscribers.filter((sub: { id: string }) => sub.id !== id);
-    
-    // Check if any subscriber was removed
-    if (subscribers.length === updatedSubscribers.length) {
-      return NextResponse.json(
-        { error: 'Subscriber not found' },
-        { status: 404 }
-      );
-    }
-    
-    // Write back to file
-    fs.writeFileSync(dataFilePath, JSON.stringify(updatedSubscribers, null, 2));
+    if (error) throw error;
     
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
-    console.error('Error deleting newsletter subscriber:', error);
+    console.error('Newsletter abonesi silme hatası:', error);
     return NextResponse.json(
-      { error: 'Failed to delete subscriber' },
+      { error: 'Abone silinemedi' },
       { status: 500 }
     );
   }

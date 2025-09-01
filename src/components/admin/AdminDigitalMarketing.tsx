@@ -5,6 +5,7 @@ import { DigitalMarketingItem, initialDigitalMarketingItems as fallbackData } fr
 import DigitalMarketingForm from '@/components/admin/DigitalMarketingForm';
 import { PlusCircle, Edit3, Trash2, Search, Filter, AlertTriangle } from 'lucide-react';
 import { pageTitleClasses, cardClasses, primaryButtonClasses, secondaryButtonClasses, inputBaseClasses, inputBorderClasses, primaryTextColor, secondaryTextColor, tableHeaderClasses, tableCellClasses, iconButtonClasses } from '@/app/utils/constants';
+import { fetchWithAuth } from '@/lib/auth';
 
 const AdminDigitalMarketingPage = () => {
   const [items, setItems] = useState<DigitalMarketingItem[]>([]);
@@ -19,7 +20,7 @@ const AdminDigitalMarketingPage = () => {
   const fetchItems = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/digital-marketing');
+      const response = await fetchWithAuth('/api/digital-marketing');
       if (!response.ok) {
         throw new Error('Failed to fetch digital marketing items');
       }
@@ -39,36 +40,25 @@ const AdminDigitalMarketingPage = () => {
   }, [fetchItems]);
 
   const handleFormSubmit = async (itemData: Omit<DigitalMarketingItem, 'id'> & { id?: number }) => {
-    const currentItems = [...items];
-    let updatedItems;
-
-    if (itemData.id) { // Editing existing item
-      updatedItems = currentItems.map(p => p.id === itemData.id ? { ...p, ...itemData } : p);
-    } else { // Adding new item
-      const newItemId = currentItems.length > 0 ? Math.max(...currentItems.map(p => p.id)) + 1 : 1;
-      const newItem = { ...itemData, id: newItemId };
-      updatedItems = [...currentItems, newItem];
-    }
-
     try {
-      const response = await fetch('/api/digital-marketing', {
+      const response = await fetchWithAuth('/api/digital-marketing', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedItems),
+        body: JSON.stringify(itemData),
       });
+      
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to save data');
       }
-      setItems(updatedItems);
+      
+      // Refresh data from server
+      await fetchItems();
       setShowForm(false);
       setEditingItem(null);
       setError(null);
     } catch (err) {
       console.error(err);
-      setError('Failed to save item: ' + (err as Error).message + '. Reverting local changes.');
-      // Optionally, revert to original items if API call fails
-      // fetchItems(); // Or simply don't update local state on error
+      setError('Failed to save item: ' + (err as Error).message);
     }
   };
 
@@ -84,17 +74,18 @@ const AdminDigitalMarketingPage = () => {
   const confirmDelete = async () => {
     if (deletingItemId === null) return;
 
-    const updatedItems = items.filter(p => p.id !== deletingItemId);
     try {
-      const response = await fetch('/api/digital-marketing', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedItems),
+      const response = await fetchWithAuth(`/api/digital-marketing?id=${deletingItemId}`, {
+        method: 'DELETE',
       });
+      
       if (!response.ok) {
-        throw new Error('Failed to delete item from server');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete item');
       }
-      setItems(updatedItems);
+      
+      // Refresh data from server
+      await fetchItems();
       setError(null);
     } catch (err) {
       console.error(err);

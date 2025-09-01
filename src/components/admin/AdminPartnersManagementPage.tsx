@@ -3,6 +3,7 @@
 import React, { useState, useEffect, FormEvent } from 'react';
 import { PartnerCategory, LogoInfo } from '@/lib/partnersDataUtils'; // Assuming types are exported
 import { PlusCircle, Edit3, Trash2, ChevronDown, ChevronRight, ImageUp, Loader2, Check, X } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 const AdminPartnersManagementPage = () => {
   const [categories, setCategories] = useState<PartnerCategory[]>([]);
@@ -12,6 +13,8 @@ const AdminPartnersManagementPage = () => {
   const [newCategoryOriginalPath, setNewCategoryOriginalPath] = useState<string>('');
   const [isAddingCategory, setIsAddingCategory] = useState<boolean>(false);
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<PartnerCategory | null>(null);
+  const [logoToDelete, setLogoToDelete] = useState<{ categoryId: string; logoId: string } | null>(null);
   const [editingCategory, setEditingCategory] = useState<PartnerCategory | null>(null);
   const [editCategoryName, setEditCategoryName] = useState<string>('');
   const [isUpdatingCategory, setIsUpdatingCategory] = useState<boolean>(false);
@@ -19,6 +22,7 @@ const AdminPartnersManagementPage = () => {
   const [newLogoAlt, setNewLogoAlt] = useState<string>('');
   const [newLogoFile, setNewLogoFile] = useState<File | null>(null);
   const [newLogoUrl, setNewLogoUrl] = useState<string>('');
+  const [newLogoClickUrl, setNewLogoClickUrl] = useState<string>('');
   const [activeLogoAddCategoryId, setActiveLogoAddCategoryId] = useState<string | null>(null); // categoryId of the category being added to
   const [deletingLogoInfo, setDeletingLogoInfo] = useState<{ categoryId: string; logoId: string } | null>(null);
   const [editingLogoInfo, setEditingLogoInfo] = useState<{ categoryId: string; logoId: string; currentAlt: string; currentUrl?: string } | null>(null);
@@ -30,16 +34,41 @@ const AdminPartnersManagementPage = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/partners');
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to fetch categories: ${response.statusText}`);
-      }
-      const data: PartnerCategory[] = await response.json();
-      setCategories(data);
+      // Fetch categories
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('partner_categories')
+        .select('*')
+        .order('id');
+      
+      if (categoriesError) throw categoriesError;
+
+      // Fetch logos for each category
+      const { data: logosData, error: logosError } = await supabase
+        .from('partner_logos')
+        .select('*')
+        .order('id');
+      
+      if (logosError) throw logosError;
+
+      // Combine categories with their logos
+      const categoriesWithLogos: PartnerCategory[] = (categoriesData || []).map(category => ({
+        id: category.id.toString(),
+        name: category.name,
+        originalPath: category.original_path,
+        logos: (logosData || [])
+          .filter(logo => logo.category_id === category.id)
+          .map(logo => ({
+            id: logo.id.toString(),
+            alt: logo.alt,
+            imagePath: logo.src,
+            url: logo.url || undefined
+          }))
+      }));
+
+      setCategories(categoriesWithLogos);
     } catch (err: any) {
       console.error("Error fetching categories:", err);
-      setError(err.message || 'An unknown error occurred while fetching categories.');
+      setError(err.message || 'Kategoriler yüklenirken hata oluştu.');
     }
     setIsLoading(false);
   };
@@ -51,57 +80,64 @@ const AdminPartnersManagementPage = () => {
   const handleAddCategory = async (e: FormEvent) => {
     e.preventDefault();
     if (!newCategoryName.trim() || !newCategoryOriginalPath.trim()) {
-      setError('Category name and original path are required.');
+      setError('Kategori adı ve orijinal yol gereklidir.');
       return;
     }
     setIsAddingCategory(true);
     setError(null);
     try {
-      const newCategoryPayload = {
-        name: newCategoryName,
-        originalPath: newCategoryOriginalPath,
-      };
-      const response = await fetch('/api/partners', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newCategoryPayload),
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to add category: ${response.statusText}`);
-      }
+      const { error } = await supabase
+        .from('partner_categories')
+        .insert([{
+          name: newCategoryName,
+          original_path: newCategoryOriginalPath
+        }]);
+      
+      if (error) throw error;
+      
       setNewCategoryName('');
       setNewCategoryOriginalPath('');
       await fetchCategories(); // Refresh the list
     } catch (err: any) {
       console.error("Error adding category:", err);
-      setError(err.message || 'An unknown error occurred while adding the category.');
+      setError(err.message || 'Kategori eklenirken hata oluştu.');
     }
     setIsAddingCategory(false);
   };
 
-  const handleDeleteCategory = async (categoryId: string) => {
-    if (!window.confirm("Bu kategoriyi ve içindeki tüm logoları silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.")) {
-      return;
-    }
-    setDeletingCategoryId(categoryId);
+  const handleDeleteCategory = (category: PartnerCategory) => {
+    setCategoryToDelete(category);
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+
+    setDeletingCategoryId(categoryToDelete.id);
     setError(null);
     try {
-      const response = await fetch(`/api/partners/${categoryId}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to delete category: ${response.statusText}`);
-      }
+      // First delete all logos in this category
+      const { error: logosError } = await supabase
+        .from('partner_logos')
+        .delete()
+        .eq('category_id', parseInt(categoryToDelete.id));
+      
+      if (logosError) throw logosError;
+
+      // Then delete the category
+      const { error: categoryError } = await supabase
+        .from('partner_categories')
+        .delete()
+        .eq('id', parseInt(categoryToDelete.id));
+      
+      if (categoryError) throw categoryError;
+      
       await fetchCategories(); // Refresh the list
     } catch (err: any) {
-      console.error(`Error deleting category ${categoryId}:`, err);
-      setError(err.message || 'An unknown error occurred while deleting the category.');
+      console.error("Error deleting category:", err);
+      setError(err.message || 'Kategori silinirken hata oluştu.');
     }
     setDeletingCategoryId(null);
+    setCategoryToDelete(null);
   };
 
   const handleEditCategory = (category: PartnerCategory) => {
@@ -118,52 +154,53 @@ const AdminPartnersManagementPage = () => {
   const handleUpdateCategory = async (e: FormEvent) => {
     e.preventDefault();
     if (!editingCategory || !editCategoryName.trim()) {
-      setError('Category name cannot be empty.');
+      setError('Kategori adı boş olamaz.');
       return;
     }
     setIsUpdatingCategory(true);
     setError(null);
     try {
-      const response = await fetch(`/api/partners/${editingCategory.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name: editCategoryName }),
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to update category: ${response.statusText}`);
-      }
+      const { error } = await supabase
+        .from('partner_categories')
+        .update({ name: editCategoryName })
+        .eq('id', parseInt(editingCategory.id));
+      
+      if (error) throw error;
+      
       await fetchCategories(); // Refresh the list
       handleCancelEdit(); // Exit edit mode
     } catch (err: any) {
       console.error(`Error updating category ${editingCategory.id}:`, err);
-      setError(err.message || 'An unknown error occurred while updating the category.');
+      setError(err.message || 'Kategori güncellenirken hata oluştu.');
     }
     setIsUpdatingCategory(false);
   };
 
-  const handleDeleteLogo = async (categoryId: string, logoId: string) => {
-    if (!window.confirm("Bu logoyu silmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve ilişkili resim dosyası da sunucudan silinecektir (eğer bulunursa).")) {
-      return;
-    }
+  const handleDeleteLogo = (categoryId: string, logoId: string) => {
+    setLogoToDelete({ categoryId, logoId });
+  };
+
+  const confirmDeleteLogo = async () => {
+    if (!logoToDelete) return;
+    const { categoryId, logoId } = logoToDelete;
+
     setDeletingLogoInfo({ categoryId, logoId });
     setError(null);
     try {
-      const response = await fetch(`/api/partners/${categoryId}/logos/${logoId}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to delete logo: ${response.statusText}`);
-      }
+      const { error } = await supabase
+        .from('partner_logos')
+        .delete()
+        .eq('id', parseInt(logoId));
+      
+      if (error) throw error;
+      
       await fetchCategories(); // Refresh the list
     } catch (err: any) {
       console.error(`Error deleting logo ${logoId} from category ${categoryId}:`, err);
-      setError(err.message || 'An unknown error occurred while deleting the logo.');
+      setError(err.message || 'Logo silinirken hata oluştu.');
     }
     setDeletingLogoInfo(null);
+    setLogoToDelete(null);
   };
 
   const handleEditLogoClick = (categoryId: string, logoId: string, currentAlt: string, currentUrl?: string) => {
@@ -183,86 +220,117 @@ const AdminPartnersManagementPage = () => {
   const handleSaveLogoEdit = async (e: FormEvent) => {
     e.preventDefault();
     if (!editingLogoInfo || !editLogoAlt.trim()) {
-      setError('Logo alt text cannot be empty.');
+      setError('Logo alt metni boş olamaz.');
       return;
     }
     setIsUpdatingLogo(true);
     setError(null);
     const { categoryId, logoId } = editingLogoInfo;
     try {
-      const response = await fetch(`/api/partners/${categoryId}/logos/${logoId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ alt: editLogoAlt, url: editLogoUrl }), // Only sending alt for update
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to update logo: ${response.statusText}`);
-      }
+      const { error } = await supabase
+        .from('partner_logos')
+        .update({ 
+          alt: editLogoAlt, 
+          url: editLogoUrl || null 
+        })
+        .eq('id', parseInt(logoId));
+      
+      if (error) throw error;
+      
       await fetchCategories(); // Refresh the list
       handleCancelEditLogo(); // Close edit form
     } catch (err: any) {
       console.error(`Error updating logo ${logoId} in category ${categoryId}:`, err);
-      setError(err.message || 'An unknown error occurred while updating the logo.');
+      setError(err.message || 'Logo güncellenirken hata oluştu.');
     }
     setIsUpdatingLogo(false);
   };
 
   const handleAddLogo = async (e: FormEvent, categoryId: string) => {
     e.preventDefault();
-    if (!newLogoAlt.trim() || !newLogoFile) {
-      setError('Logo alt metni ve bir resim dosyası seçmek zorunludur.');
+    console.log('handleAddLogo called with categoryId:', categoryId);
+    console.log('Form data:', { newLogoAlt, newLogoFile, newLogoUrl });
+    
+    if (!newLogoAlt.trim()) {
+      setError('Logo alt metni zorunludur.');
       return;
     }
 
-    // Client-side file type validation (optional, but good for UX)
-    const allowedTypes = ['image/svg+xml', 'image/png', 'image/jpeg', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(newLogoFile.type)) {
-      setError(`Geçersiz dosya türü: ${newLogoFile.type}. Sadece SVG, PNG, JPG, GIF, WEBP kabul edilir.`);
-      return;
-    }
-    // Client-side file size validation (optional)
-    if (newLogoFile.size > 2 * 1024 * 1024) { // Max 2MB
-      setError('Dosya çok büyük. Maksimum boyut 2MB olmalıdır.');
+    // Require file upload
+    if (!newLogoFile) {
+      setError('Logo dosyası seçilmelidir.');
       return;
     }
 
     setActiveLogoAddCategoryId(categoryId);
     setError(null);
 
-    const formData = new FormData();
-    formData.append('alt', newLogoAlt);
-    formData.append('logoImage', newLogoFile);
-    if (newLogoUrl.trim()) {
-      formData.append('url', newLogoUrl.trim());
-    }
-
     try {
-      const response = await fetch(`/api/partners/${categoryId}/logos`, {
-        method: 'POST',
-        body: formData, // FormData will set Content-Type to multipart/form-data automatically
-      });
+      // Upload file to Supabase Storage
+      const fileExt = newLogoFile.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `partner-logos/${fileName}`;
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Logoyu eklerken hata: ${response.statusText}`);
+      console.log('Uploading file:', fileName);
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('partner-logos')
+        .upload(filePath, newLogoFile);
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw new Error('Dosya yüklenirken hata oluştu: ' + uploadError.message);
       }
 
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('partner-logos')
+        .getPublicUrl(filePath);
+
+      console.log('File uploaded, public URL:', publicUrl);
+
+      const logoSrc = publicUrl;
+      console.log('Inserting logo with data:', {
+        category_id: parseInt(categoryId),
+        alt: newLogoAlt,
+        src: logoSrc,
+        url: newLogoClickUrl.trim() || null
+      });
+
+      const { data, error } = await supabase
+        .from('partner_logos')
+        .insert([{
+          category_id: parseInt(categoryId),
+          alt: newLogoAlt,
+          src: logoSrc,
+          url: newLogoClickUrl.trim() || null
+        }])
+        .select();
+
+      if (error) {
+        console.error('Supabase insert error:', error);
+        throw error;
+      }
+
+      console.log('Logo inserted successfully:', data);
       await fetchCategories(); // Refresh categories and their logos
+      
+      // Clear form
       setNewLogoAlt('');
       setNewLogoFile(null);
       setNewLogoUrl('');
-      // Reset file input visually if possible (or provide a key to re-render)
-      const fileInput = (e.target as HTMLFormElement).elements.namedItem('newLogoFile') as HTMLInputElement;
+      setNewLogoClickUrl('');
+      
+      // Reset file input
+      const fileInput = document.querySelector(`#newLogoFile-${categoryId}`) as HTMLInputElement;
       if (fileInput) {
         fileInput.value = '';
       }
-      // Optionally, keep the category expanded or close it
+      
+      console.log('Form cleared successfully');
     } catch (err: any) {
       console.error(`Error adding logo to category ${categoryId}:`, err);
-      setError(err.message || 'Logo eklenirken bilinmeyen bir hata oluştu.');
+      setError(err.message || 'Logo eklenirken hata oluştu.');
     }
     setActiveLogoAddCategoryId(null);
   };
@@ -277,7 +345,55 @@ const AdminPartnersManagementPage = () => {
   }
 
   return (
-    <div className="p-4 md:p-6 bg-gray-900 min-h-screen text-white">
+    <>
+      {/* Deletion Confirmation Modals */}
+      {logoToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50">
+          <div className="bg-gray-800 p-6 rounded-lg shadow-xl text-white max-w-sm mx-auto">
+            <h3 className="text-lg font-bold mb-4">Logoyu Silme Onayı</h3>
+            <p>Bu logoyu silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.</p>
+            <div className="mt-6 flex justify-end space-x-4">
+              <button
+                onClick={() => setLogoToDelete(null)}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-md transition-colors"
+              >
+                İptal
+              </button>
+              <button
+                onClick={confirmDeleteLogo}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-md transition-colors"
+              >
+                Sil
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {categoryToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50">
+          <div className="bg-gray-800 p-6 rounded-lg shadow-xl text-white max-w-sm mx-auto">
+            <h3 className="text-lg font-bold mb-4">Kategoriyi Silme Onayı</h3>
+            <p><b>{categoryToDelete.name}</b> kategorisini ve içindeki tüm logoları silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.</p>
+            <div className="mt-6 flex justify-end space-x-4">
+              <button
+                onClick={() => setCategoryToDelete(null)}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-md transition-colors"
+              >
+                İptal
+              </button>
+              <button
+                onClick={confirmDeleteCategory}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-md transition-colors"
+              >
+                Sil
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="p-4 md:p-6 bg-gray-900 min-h-screen text-white">
       <h1 className="text-3xl font-bold mb-8 text-purple-400">İş Ortakları Yönetimi</h1>
 
       {error && (
@@ -370,7 +486,7 @@ const AdminPartnersManagementPage = () => {
                   </button>
                   <button 
                     title="Kategoriyi Sil"
-                    onClick={() => handleDeleteCategory(category.id)}
+                    onClick={() => handleDeleteCategory(category)}
                     disabled={deletingCategoryId === category.id || isLoading}
                     className="p-2 bg-red-600 hover:bg-red-700 rounded-full text-white transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -517,18 +633,20 @@ const AdminPartnersManagementPage = () => {
                           accept="image/svg+xml, image/png, image/jpeg, image/gif, image/webp"
                           onChange={(e) => setNewLogoFile(e.target.files ? e.target.files[0] : null)}
                           className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm text-gray-200 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                          required
                         />
                       </div>
                       <div className="mb-4">
-                        <label htmlFor={`newLogoUrl-${category.id}`} className="block text-sm font-medium text-gray-300 mb-1">Logo URL (İsteğe Bağlı)</label>
+                        <label htmlFor={`newLogoClickUrl-${category.id}`} className="block text-sm font-medium text-gray-300 mb-1">Tıklama URL'i (İsteğe Bağlı)</label>
                         <input
-                          type="url"
-                          id={`newLogoUrl-${category.id}`}
-                          placeholder="https://example.com"
-                          value={newLogoUrl}
-                          onChange={(e) => setNewLogoUrl(e.target.value)}
+                          type="text"
+                          id={`newLogoClickUrl-${category.id}`}
+                          placeholder="https://company-website.com"
+                          value={newLogoClickUrl}
+                          onChange={(e) => setNewLogoClickUrl(e.target.value)}
                           className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         />
+                        <p className="text-xs text-gray-400 mt-1">Logoya tıklandığında gidilecek web sitesi</p>
                       </div>
                       <button
                         type="submit"
@@ -550,6 +668,7 @@ const AdminPartnersManagementPage = () => {
       </ul>
     </div>
   </div>
+  </>
 );
 };
 

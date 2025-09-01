@@ -5,7 +5,7 @@ import React from 'react';
 import { LucideProps } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ArrowRight, MapPin, Globe } from 'lucide-react';
-import { JobOpening } from '@/types/jobOpenings';
+import { JobOpening } from '@/lib/supabase';
 import dynamic from 'next/dynamic';
 import dynamicIconImports from 'lucide-react/dynamicIconImports';
 
@@ -32,15 +32,15 @@ const JobOpeningCard: React.FC<JobOpeningCardProps> = ({ job, onClick }) => {
       <div>
         <div className="flex justify-between items-start mb-4">
           <div className="w-16 h-16 bg-purple-600/30 rounded-full flex items-center justify-center text-purple-400 mb-3">
-            <LucideIcon name={job.iconName} size={32} />
+            <LucideIcon name={job.icon_name || 'briefcase'} size={32} />
           </div>
           <div className="flex space-x-2 text-xs text-gray-400">
-            {job.isRemote && (
+            {job.is_remote && (
               <span className="flex items-center bg-gray-700/50 px-2 py-1 rounded-full">
                 <Globe size={12} className="mr-1" /> Remote
               </span>
             )}
-            {job.isTr && (
+            {job.is_tr && (
               <span className="flex items-center bg-gray-700/50 px-2 py-1 rounded-full">
                 <MapPin size={12} className="mr-1" /> TR
               </span>
@@ -49,7 +49,7 @@ const JobOpeningCard: React.FC<JobOpeningCardProps> = ({ job, onClick }) => {
         </div>
         <h3 className="text-xl font-semibold mb-2 text-white">{job.title}</h3>
         <p className="text-gray-400 text-sm mb-4 line-clamp-3">
-          {job.shortDescription}
+          {job.short_description}
         </p>
       </div>
       <button

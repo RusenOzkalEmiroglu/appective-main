@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { ContactInfo } from '@/lib/data';
+import { supabase, ContactInfo } from '@/lib/supabase';
 
 const ContactInfoAdmin = () => {
   const [contactInfo, setContactInfo] = useState<ContactInfo[]>([]);
@@ -12,14 +12,16 @@ const ContactInfoAdmin = () => {
   useEffect(() => {
     const fetchContactInfo = async () => {
       try {
-        const response = await fetch('/api/contact-info');
-        if (!response.ok) {
-          throw new Error('Failed to fetch contact info');
-        }
-        const data = await response.json();
-        setContactInfo(data);
+        const { data, error } = await supabase
+          .from('contact_info')
+          .select('*')
+          .order('id');
+        
+        if (error) throw error;
+        setContactInfo(data || []);
       } catch (err: any) {
         setError(err.message);
+        console.error('Contact info fetch error:', err);
       } finally {
         setLoading(false);
       }
@@ -37,20 +39,26 @@ const ContactInfoAdmin = () => {
     setError('');
     setSuccess('');
     try {
-      const response = await fetch('/api/contact-info', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(contactInfo),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save contact info');
+      // Update each contact info item
+      for (const info of contactInfo) {
+        const { error } = await supabase
+          .from('contact_info')
+          .update({
+            icon: info.icon,
+            title: info.title,
+            details: info.details,
+            link: info.link,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', info.id);
+        
+        if (error) throw error;
       }
-      setSuccess('Contact information updated successfully!');
+      
+      setSuccess('İletişim bilgileri başarıyla güncellendi!');
     } catch (err: any) {
       setError(err.message);
+      console.error('Contact info save error:', err);
     }
   };
 

@@ -2,8 +2,45 @@
 'use client';
 
 import React, { useState, useEffect, FormEvent } from 'react';
-import { JobOpening } from '@/types/jobOpenings';
+import { JobOpening } from '@/lib/supabase';
 import { PlusCircle, Edit3, Trash2, ChevronDown, ChevronUp, Loader2, Check, X, AlertCircle } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+
+// Onay modalı component'i
+interface ConfirmModalProps {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+const ConfirmModal: React.FC<ConfirmModalProps> = ({ isOpen, title, message, onConfirm, onCancel }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-gray-800 p-6 rounded-lg max-w-md w-full mx-4">
+        <h3 className="text-xl font-bold text-white mb-4">{title}</h3>
+        <p className="text-gray-300 mb-6">{message}</p>
+        <div className="flex justify-end space-x-4">
+          <button
+            onClick={onCancel}
+            className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+          >
+            İptal
+          </button>
+          <button
+            onClick={onConfirm}
+            className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+          >
+            Sil
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const AdminJobOpeningsManagementPage = () => {
   const [jobOpenings, setJobOpenings] = useState<JobOpening[]>([]);
@@ -11,16 +48,24 @@ const AdminJobOpeningsManagementPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState<boolean>(false);
   const [editingJob, setEditingJob] = useState<JobOpening | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; jobId: string; jobTitle: string }>({
+    isOpen: false,
+    jobId: '',
+    jobTitle: ''
+  });
 
   const fetchJobOpenings = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/job-openings');
-      if (!response.ok) throw new Error('Failed to fetch job openings.');
-      const data = await response.json();
-      setJobOpenings(data);
+      const { data, error } = await supabase
+        .from('job_openings')
+        .select('*')
+        .order('id');
+      
+      if (error) throw error;
+      setJobOpenings(data || []);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'İş ilanları yüklenirken hata oluştu.');
     } finally {
       setIsLoading(false);
     }
@@ -30,16 +75,32 @@ const AdminJobOpeningsManagementPage = () => {
     fetchJobOpenings();
   }, []);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this job opening?')) return;
+  const handleDeleteClick = (job: JobOpening) => {
+    setDeleteModal({
+      isOpen: true,
+      jobId: job.id,
+      jobTitle: job.title
+    });
+  };
 
+  const handleDeleteConfirm = async () => {
     try {
-      const response = await fetch(`/api/job-openings/${id}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error('Failed to delete job opening.');
-      setJobOpenings(prev => prev.filter(job => job.id !== id));
+      const { error } = await supabase
+        .from('job_openings')
+        .delete()
+        .eq('id', deleteModal.jobId);
+      
+      if (error) throw error;
+      setJobOpenings(prev => prev.filter(job => job.id !== deleteModal.jobId));
+      setDeleteModal({ isOpen: false, jobId: '', jobTitle: '' });
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'İş ilanı silinirken hata oluştu.');
+      setDeleteModal({ isOpen: false, jobId: '', jobTitle: '' });
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteModal({ isOpen: false, jobId: '', jobTitle: '' });
   };
 
   if (isLoading) return <div className="flex justify-center items-center p-8"><Loader2 className="animate-spin" /> Loading...</div>;
@@ -81,12 +142,21 @@ const AdminJobOpeningsManagementPage = () => {
                 <span className="font-semibold">{job.title}</span>
                 <div className="flex items-center space-x-4">
                   <button onClick={() => setEditingJob(job)} className="text-blue-400 hover:text-blue-300"><Edit3 size={20}/></button>
-                  <button onClick={() => handleDelete(job.id)} className="text-red-500 hover:text-red-400"><Trash2 size={20}/></button>
+                  <button onClick={() => handleDeleteClick(job)} className="text-red-500 hover:text-red-400"><Trash2 size={20}/></button>
                 </div>
               </div>
             ))}
           </div>
         </div>
+
+        {/* Onay Modalı */}
+        <ConfirmModal
+          isOpen={deleteModal.isOpen}
+          title="İş İlanını Sil"
+          message={`"${deleteModal.jobTitle}" iş ilanını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`}
+          onConfirm={handleDeleteConfirm}
+          onCancel={handleDeleteCancel}
+        />
       </div>
     </div>
   );
@@ -100,86 +170,120 @@ interface JobOpeningFormProps {
 }
 
 const JobOpeningForm: React.FC<JobOpeningFormProps> = ({ job, onSuccess, onCancel }) => {
-    const [formData, setFormData] = useState<Partial<JobOpening>>({
-        title: '',
-        shortDescription: '',
-        iconName: 'Briefcase',
-        isRemote: false,
-        isTr: false,
-        slug: '',
-        details: {
-            fullTitle: '',
-            description: '',
-            whatYouWillDo: [],
-            whatWereLookingFor: [],
-            whyJoinUs: []
-        }
+    const [formData, setFormData] = useState({
+        title: job?.title || '',
+        short_description: job?.short_description || '',
+        icon_name: job?.icon_name || 'Briefcase',
+        slug: job?.slug || '',
+        is_remote: job?.is_remote || false,
+        is_tr: job?.is_tr || false,
+        full_title: job?.full_title || '',
+        description: job?.description || '',
+        what_you_will_do: job?.what_you_will_do || [],
+        what_were_looking_for: job?.what_were_looking_for || [],
+        why_join_us: job?.why_join_us || [],
+        apply_link: job?.apply_link || ''
     });
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [formError, setFormError] = useState<string | null>(null);
 
     useEffect(() => {
         if (job) {
-            setFormData(job);
-        } else {
-            // Reset form for adding new
             setFormData({
-                title: '', shortDescription: '', iconName: 'Briefcase', isRemote: false, isTr: false, slug: '',
-                details: { fullTitle: '', description: '', whatYouWillDo: [], whatWereLookingFor: [], whyJoinUs: [] }
+                title: job.title,
+                short_description: job.short_description,
+                icon_name: job.icon_name,
+                slug: job.slug,
+                is_remote: job.is_remote,
+                is_tr: job.is_tr,
+                full_title: job.full_title,
+                description: job.description,
+                what_you_will_do: job.what_you_will_do,
+                what_were_looking_for: job.what_were_looking_for,
+                why_join_us: job.why_join_us,
+                apply_link: job.apply_link || ''
             });
         }
     }, [job]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
-        const checked = type === 'checkbox' ? (e.target as HTMLInputElement).checked : false;
-
-        if (name.startsWith('details.')) {
-            const detailKey = name.split('.')[1] as keyof JobOpening['details'];
-            setFormData(prev => ({
-                ...prev,
-                details: { ...prev.details!, [detailKey]: value }
-            }));
+        
+        if (type === 'checkbox') {
+            const checked = (e.target as HTMLInputElement).checked;
+            setFormData(prev => ({ ...prev, [name]: checked }));
         } else {
-            setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+            setFormData(prev => ({ ...prev, [name]: value }));
         }
     };
-    
-    const handleArrayChange = (e: React.ChangeEvent<HTMLTextAreaElement>, field: 'whatYouWillDo' | 'whatWereLookingFor' | 'whyJoinUs') => {
-        const value = e.target.value.split('\n');
-        setFormData(prev => ({ ...prev, details: { ...prev.details!, [field]: value } }));
-    }
 
+    const handleArrayChange = (e: React.ChangeEvent<HTMLTextAreaElement>, field: 'what_you_will_do' | 'what_were_looking_for' | 'why_join_us') => {
+        const items = e.target.value.split('\n').filter(item => item.trim() !== '');
+        setFormData(prev => ({ ...prev, [field]: items }));
+    };
+    
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
         setFormError(null);
 
-        // Ensure fullTitle is set from title before submitting
-        const submissionData = {
-            ...formData,
-            details: {
-                ...formData.details,
-                fullTitle: formData.title
-            }
+        // Generate unique ID for new jobs
+        const generateId = () => {
+            return 'job_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         };
 
-        const url = job ? `/api/job-openings/${job.id}` : '/api/job-openings';
-        const method = job ? 'PUT' : 'POST';
+        // Prepare data for Supabase - tam alan listesi
+        const submissionData = {
+            id: job ? job.id : generateId(), // Use existing ID or generate new one
+            title: formData.title,
+            short_description: formData.short_description,
+            icon_name: formData.icon_name || 'Briefcase',
+            slug: formData.title?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+            is_remote: formData.is_remote || false,
+            is_tr: formData.is_tr || false,
+            full_title: formData.full_title || formData.title,
+            description: formData.description,
+            what_you_will_do: formData.what_you_will_do,
+            what_were_looking_for: formData.what_were_looking_for,
+            why_join_us: formData.why_join_us,
+            apply_link: formData.apply_link
+        };
+
+        console.log('Submitting job data:', submissionData); // Debug
 
         try {
-            const response = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(submissionData)
-            });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to save job opening.');
+            if (job) {
+                try {
+                    // Update existing job
+                    const { id, ...updateData } = submissionData; // Exclude ID from update data
+                    
+                    const { data, error } = await supabase
+                        .from('job_openings')
+                        .update(updateData)
+                        .eq('id', job.id)
+                        .select();
+                    
+                    console.log('Update result:', { data, error }); // Debug
+                    if (error) throw error;
+                } catch (err: any) {
+                    console.error('Update error:', err); // Debug
+                    throw err;
+                }
+            } else {
+                // Insert new job with generated ID
+                const { data, error } = await supabase
+                    .from('job_openings')
+                    .insert([submissionData])
+                    .select();
+                
+                console.log('Insert result:', { data, error }); // Debug
+                if (error) throw error;
             }
+            
             onSuccess();
         } catch (err: any) {
-            setFormError(err.message);
+            console.error('Submission error:', err); // Debug
+            setFormError(err.message || 'İş ilanı kaydedilirken hata oluştu.');
         } finally {
             setIsSubmitting(false);
         }
@@ -200,27 +304,27 @@ const JobOpeningForm: React.FC<JobOpeningFormProps> = ({ job, onSuccess, onCance
                     <label className="text-sm font-medium text-gray-300">Icon</label>
                     <div className="flex items-center space-x-2">
                         <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center text-gray-400">
-                            {formData.iconName && (
+                            {formData.icon_name && (
                                 <>
-                                    {formData.iconName === 'Briefcase' && (
+                                    {formData.icon_name === 'Briefcase' && (
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                             <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
                                             <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
                                         </svg>
                                     )}
-                                    {formData.iconName === 'Code' && (
+                                    {formData.icon_name === 'Code' && (
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                             <polyline points="16 18 22 12 16 6"></polyline>
                                             <polyline points="8 6 2 12 8 18"></polyline>
                                         </svg>
                                     )}
-                                    {formData.iconName === 'Megaphone' && (
+                                    {formData.icon_name === 'Megaphone' && (
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                             <path d="m3 11 18-5v12L3 14v-3z"></path>
                                             <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"></path>
                                         </svg>
                                     )}
-                                    {formData.iconName === 'Share2' && (
+                                    {formData.icon_name === 'Share2' && (
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                             <circle cx="18" cy="5" r="3"></circle>
                                             <circle cx="6" cy="12" r="3"></circle>
@@ -229,7 +333,7 @@ const JobOpeningForm: React.FC<JobOpeningFormProps> = ({ job, onSuccess, onCance
                                             <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
                                         </svg>
                                     )}
-                                    {formData.iconName === 'PenTool' && (
+                                    {formData.icon_name === 'PenTool' && (
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                             <path d="m12 19 7-7 3 3-7 7-3-3z"></path>
                                             <path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
@@ -237,21 +341,21 @@ const JobOpeningForm: React.FC<JobOpeningFormProps> = ({ job, onSuccess, onCance
                                             <circle cx="11" cy="11" r="2"></circle>
                                         </svg>
                                     )}
-                                    {formData.iconName === 'BarChart' && (
+                                    {formData.icon_name === 'BarChart' && (
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                             <line x1="12" y1="20" x2="12" y2="10"></line>
                                             <line x1="18" y1="20" x2="18" y2="4"></line>
                                             <line x1="6" y1="20" x2="6" y2="16"></line>
                                         </svg>
                                     )}
-                                    {formData.iconName === 'Database' && (
+                                    {formData.icon_name === 'Database' && (
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                             <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
                                             <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
                                             <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
                                         </svg>
                                     )}
-                                    {formData.iconName === 'Globe' && (
+                                    {formData.icon_name === 'Globe' && (
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                             <circle cx="12" cy="12" r="10"></circle>
                                             <line x1="2" y1="12" x2="22" y2="12"></line>
@@ -262,8 +366,8 @@ const JobOpeningForm: React.FC<JobOpeningFormProps> = ({ job, onSuccess, onCance
                             )}
                         </div>
                         <select 
-                            name="iconName" 
-                            value={formData.iconName} 
+                            name="icon_name" 
+                            value={formData.icon_name} 
                             onChange={handleChange} 
                             className="bg-gray-700 p-2 rounded-lg flex-grow"
                         >
@@ -282,43 +386,65 @@ const JobOpeningForm: React.FC<JobOpeningFormProps> = ({ job, onSuccess, onCance
                 </div>
                 
                 <div className="flex flex-col space-y-1 md:col-span-2">
-                    <label className="text-sm font-medium text-gray-300">Summary</label>
-                    <textarea name="shortDescription" value={formData.shortDescription} onChange={handleChange} placeholder="Brief description of the job position" className="bg-gray-700 p-2 rounded-lg" rows={3}></textarea>
+                    <label className="text-sm font-medium text-gray-300">Kısa Açıklama</label>
+                    <textarea name="short_description" value={formData.short_description} onChange={handleChange} placeholder="İş pozisyonunun kısa açıklaması" className="bg-gray-700 p-2 rounded-lg" rows={3}></textarea>
+                </div>
+                
+                <div className="flex flex-col space-y-1 md:col-span-2">
+                    <label className="text-sm font-medium text-gray-300">Tam Başlık</label>
+                    <input name="full_title" value={formData.full_title} onChange={handleChange} placeholder="Detaylı iş başlığı" className="bg-gray-700 p-2 rounded-lg" />
+                </div>
+                
+                <div className="flex flex-col space-y-1 md:col-span-2">
+                    <label className="text-sm font-medium text-gray-300">Açıklama</label>
+                    <textarea name="description" value={formData.description} onChange={handleChange} placeholder="İş pozisyonunun detaylı açıklaması" className="bg-gray-700 p-2 rounded-lg" rows={4}></textarea>
+                </div>
+                
+                <div className="flex flex-col space-y-1 md:col-span-2">
+                    <label className="text-sm font-medium text-gray-300">Yapacağınız İşler (Her satıra bir madde)</label>
+                    <textarea 
+                        value={formData.what_you_will_do.join('\n')} 
+                        onChange={(e) => handleArrayChange(e, 'what_you_will_do')} 
+                        placeholder="• İş tanımlarını buraya yazın\n• Her satıra bir madde" 
+                        className="bg-gray-700 p-2 rounded-lg" 
+                        rows={4}
+                    ></textarea>
+                </div>
+                
+                <div className="flex flex-col space-y-1 md:col-span-2">
+                    <label className="text-sm font-medium text-gray-300">Aradığımız Özellikler (Her satıra bir madde)</label>
+                    <textarea 
+                        value={formData.what_were_looking_for.join('\n')} 
+                        onChange={(e) => handleArrayChange(e, 'what_were_looking_for')} 
+                        placeholder="• Gerekli beceriler\n• Her satıra bir madde" 
+                        className="bg-gray-700 p-2 rounded-lg" 
+                        rows={4}
+                    ></textarea>
+                </div>
+                
+                <div className="flex flex-col space-y-1 md:col-span-2">
+                    <label className="text-sm font-medium text-gray-300">Neden Bize Katılmalısınız (Her satıra bir madde)</label>
+                    <textarea 
+                        value={formData.why_join_us.join('\n')} 
+                        onChange={(e) => handleArrayChange(e, 'why_join_us')} 
+                        placeholder="• Şirket avantajları\n• Her satıra bir madde" 
+                        className="bg-gray-700 p-2 rounded-lg" 
+                        rows={4}
+                    ></textarea>
+                </div>
+                
+                <div className="flex flex-col space-y-1 md:col-span-2">
+                    <label className="text-sm font-medium text-gray-300">Başvuru Linki (Opsiyonel)</label>
+                    <input name="apply_link" value={formData.apply_link} onChange={handleChange} placeholder="https://..." className="bg-gray-700 p-2 rounded-lg" />
                 </div>
                 
                 <div className="flex items-center gap-4">
-                    <label className="flex items-center"><input type="checkbox" name="isRemote" checked={formData.isRemote} onChange={handleChange} className="mr-2"/> Remote</label>
-                    <label className="flex items-center"><input type="checkbox" name="isTr" checked={formData.isTr} onChange={handleChange} className="mr-2"/> Office</label>
+                    <label className="flex items-center"><input type="checkbox" name="is_remote" checked={formData.is_remote} onChange={handleChange} className="mr-2"/> Uzaktan</label>
+                    <label className="flex items-center"><input type="checkbox" name="is_tr" checked={formData.is_tr} onChange={handleChange} className="mr-2"/> Ofis</label>
                 </div>
             </div>
 
-            <hr className="border-gray-600"/>
 
-            {/* Detail Fields */}
-            <h3 className="text-xl font-semibold mt-8 mb-4 border-b border-gray-700 pb-2">Job Details (Modal)</h3>
-            <div className="grid grid-cols-1 gap-6">
-                <input type="hidden" name="details.fullTitle" value={formData.title || ''} />
-                
-                <div className="flex flex-col space-y-1">
-                    <label className="text-sm font-medium text-gray-300">Description</label>
-                    <textarea name="details.description" value={formData.details?.description || ''} onChange={handleChange} placeholder="Full job description" className="bg-gray-700 p-2 rounded-lg w-full" rows={4}></textarea>
-                </div>
-                
-                <div className="flex flex-col space-y-1">
-                    <label className="text-sm font-medium text-gray-300">What You'll Be Doing</label>
-                    <textarea value={formData.details?.whatYouWillDo?.join('\n')} onChange={(e) => handleArrayChange(e, 'whatYouWillDo')} placeholder="One item per line" className="bg-gray-700 p-2 rounded-lg w-full" rows={4}></textarea>
-                </div>
-                
-                <div className="flex flex-col space-y-1">
-                    <label className="text-sm font-medium text-gray-300">What We're Looking For</label>
-                    <textarea value={formData.details?.whatWereLookingFor?.join('\n')} onChange={(e) => handleArrayChange(e, 'whatWereLookingFor')} placeholder="One item per line" className="bg-gray-700 p-2 rounded-lg w-full" rows={4}></textarea>
-                </div>
-                
-                <div className="flex flex-col space-y-1">
-                    <label className="text-sm font-medium text-gray-300">Why Join Us?</label>
-                    <textarea value={formData.details?.whyJoinUs?.join('\n')} onChange={(e) => handleArrayChange(e, 'whyJoinUs')} placeholder="One item per line" className="bg-gray-700 p-2 rounded-lg w-full" rows={4}></textarea>
-                </div>
-            </div>
 
             <div className="flex justify-end space-x-4">
                 <button type="button" onClick={onCancel} className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Cancel</button>

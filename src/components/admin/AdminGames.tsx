@@ -5,6 +5,7 @@ import { GameItem, initialGames } from '@/data/gamesData';
 import GameForm from '@/components/admin/GameForm';
 import { PlusCircle, Edit3, Trash2, Search, Filter } from 'lucide-react';
 import { primaryTextColor, secondaryTextColor, inputBg, buttonClasses, secondaryButtonClasses, primaryBgColor } from '@/app/utils/constants';
+import { fetchWithAuth } from '@/lib/auth';
 
 // Delete Confirmation Modal Component (reusable)
 interface DeleteConfirmationModalProps {
@@ -55,7 +56,7 @@ const AdminGamesPage = () => {
     setIsLoading(true);
     setError('');
     try {
-      const response = await fetch('/api/games');
+      const response = await fetchWithAuth('/api/games');
       if (!response.ok) {
         const errData = await response.json().catch(() => ({ message: 'Failed to fetch games and parse error' }));
         throw new Error(errData.message || `HTTP error! status: ${response.status}`);
@@ -95,37 +96,34 @@ const AdminGamesPage = () => {
     setFilteredGames(items);
   }, [searchTerm, selectedPlatformFilter, games]);
 
-  const saveGamesToServer = async (updatedGames: GameItem[]) => {
+  const saveGameToServer = async (itemData: GameItem) => {
     setIsLoading(true);
     setError('');
     try {
-      const response = await fetch('/api/games', {
+      const response = await fetchWithAuth('/api/games', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedGames),
+        body: JSON.stringify(itemData),
       });
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({ message: 'Failed to save games and parse error' }));
+        const errData = await response.json().catch(() => ({ message: 'Failed to save game and parse error' }));
         throw new Error(errData.message || `HTTP error! status: ${response.status}`);
       }
-      fetchGames(); // Refresh data after saving
+      await fetchGames(); // Refresh data after saving
     } catch (err: any) {
-      console.error("Save Games Error:", err);
-      setError(err.message || 'Could not save games.');
+      console.error("Save Game Error:", err);
+      setError(err.message || 'Could not save game.');
     }
     setIsLoading(false);
   };
 
   const handleFormSubmit = async (data: GameItem) => {
-    let updatedGames;
+    let itemData;
     if (isEditMode && editingItem) {
-      updatedGames = games.map(item => item.id === editingItem.id ? { ...data, id: editingItem.id } : item);
+      itemData = { ...data, id: editingItem.id };
     } else {
-      const newId = games.length > 0 ? Math.max(...games.map(item => item.id)) + 1 : 1;
-      const newItem = { ...data, id: newId };
-      updatedGames = [...games, newItem];
+      itemData = { ...data }; // Let Supabase handle ID generation
     }
-    await saveGamesToServer(updatedGames);
+    await saveGameToServer(itemData);
     setShowForm(false);
     setEditingItem(null);
     setIsEditMode(false);
@@ -150,8 +148,22 @@ const AdminGamesPage = () => {
 
   const handleDeleteConfirmed = async () => {
     if (itemToDelete) {
-      const updatedGames = games.filter(item => item.id !== itemToDelete.id);
-      await saveGamesToServer(updatedGames);
+      setIsLoading(true);
+      setError('');
+      try {
+        const response = await fetchWithAuth(`/api/games?id=${itemToDelete.id}`, {
+          method: 'DELETE',
+        });
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({ message: 'Failed to delete game and parse error' }));
+          throw new Error(errData.message || `HTTP error! status: ${response.status}`);
+        }
+        await fetchGames(); // Refresh data after deletion
+      } catch (err: any) {
+        console.error("Delete Game Error:", err);
+        setError(err.message || 'Could not delete game.');
+      }
+      setIsLoading(false);
       setShowDeleteModal(false);
       setItemToDelete(null);
     }

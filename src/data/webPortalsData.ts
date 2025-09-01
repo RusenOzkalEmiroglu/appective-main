@@ -39,5 +39,13 @@ export const initialWebPortalItems: WebPortalItem[] = [
     "image": "/images/interactive-mastheads/web-portals/bili-im-kulis/preview-a5cf41a909771326.png",
     "projectUrl": "https://www.bilisimkulis.com",
     "id": 7
+  },
+  {
+    "title": "aeüiüi",
+    "client": "aeüiüi",
+    "description": "ieaüiüia",
+    "image": "/uploads/59468765-59c8-483d-a431-1bb16862fe51.png",
+    "projectUrl": "https://garanti.com.tr",
+    "id": 8
   }
 ];

@@ -17,6 +17,7 @@ const GameForm: React.FC<GameFormProps> = ({ initialData, onSubmit, onCancel, is
   const [features, setFeatures] = useState(''); // Comma-separated string
   const [platforms, setPlatforms] = useState(initialData?.platforms || '');
   const [projectUrl, setProjectUrl] = useState(initialData?.projectUrl || '');
+  const [imageError, setImageError] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialData) {
@@ -37,8 +38,20 @@ const GameForm: React.FC<GameFormProps> = ({ initialData, onSubmit, onCancel, is
     }
   }, [initialData]);
 
+  const handleImageUploaded = (url: string) => {
+    setImage(url);
+    setImageError(null); // Clear error when image is uploaded
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate that image is uploaded
+    if (!image || image.trim() === '') {
+      setImageError('Lütfen bir resim yükleyin.');
+      return;
+    }
+    
     const featuresArray = features.split(',').map(f => f.trim()).filter(f => f);
     
     // For new items, ID will be handled by the parent component or API
@@ -93,12 +106,15 @@ const GameForm: React.FC<GameFormProps> = ({ initialData, onSubmit, onCancel, is
           <div>
             <label className={`block text-sm font-medium ${secondaryTextColor} mb-1`}>Image</label>
             <ImageUploader 
-              onImageUploaded={setImage} 
+              onImageUploaded={handleImageUploaded} 
               currentImagePath={image} 
               category="games"
               brand={title || "game_asset"} 
               type="preview"
             />
+            {imageError && (
+              <p className="text-red-500 text-sm mt-1">{imageError}</p>
+            )}
             {image && (
               <div className="mt-3 p-2 border border-gray-600 rounded-md bg-gray-700">
                 <img src={image} alt="Preview" className="max-h-40 rounded-md mx-auto" />

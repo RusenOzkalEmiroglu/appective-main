@@ -5,4 +5,5 @@ export interface ApplicationItem {
   image: string;
   features: string[];
   platforms: string;
+  project_url?: string;
 }

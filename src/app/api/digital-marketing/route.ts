@@ -1,71 +1,104 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
+import { supabase } from '@/lib/supabase';
 import { DigitalMarketingItem, initialDigitalMarketingItems } from '@/data/digitalMarketingData';
 
-const dataFilePath = path.join(process.cwd(), 'src', 'data', 'digitalMarketingData.ts');
-
-// Helper function to read data from the file
-const readDigitalMarketingItemsFromFile = (): DigitalMarketingItem[] => {
-  try {
-    const fileContent = fs.readFileSync(dataFilePath, 'utf-8');
-    const match = fileContent.match(/export const initialDigitalMarketingItems: DigitalMarketingItem\[\] = ([\s\S]*?);/);
-    if (match && match[1]) {
-      // This is a simplified approach. For robustness, consider using a dedicated JSON file or database.
-      // The regex extracts the array string, which needs to be valid JSON to parse.
-      // For now, we'll rely on the initial data if parsing is complex or fails.
-      try {
-        // Attempting to parse directly is complex for TS files. Returning initial data as fallback.
-        // To persist changes, the write function needs to correctly format the TS file.
-        return initialDigitalMarketingItems; 
-      } catch (e) {
-        console.error('Error parsing digital marketing data from file:', e);
-        return initialDigitalMarketingItems; // Fallback
-      }
-    }
-    return initialDigitalMarketingItems; // Fallback if no match
-  } catch (error) {
-    console.error('Error reading digital marketing data file:', error);
-    return initialDigitalMarketingItems; // Fallback to initial data if file read fails
-  }
-};
-
-// Helper function to write data to the file
-const writeDigitalMarketingItemsToFile = (data: DigitalMarketingItem[]) => {
-  const tsContent = `export interface DigitalMarketingItem {
-  id: number;
-  title: string;
-  client: string;
-  description: string;
-  image: string;
-  services: string[];
-  projectUrl?: string;
-}
-
-export const initialDigitalMarketingItems: DigitalMarketingItem[] = ${JSON.stringify(data, null, 2)};
-`;
-  try {
-    fs.writeFileSync(dataFilePath, tsContent, 'utf-8');
-  } catch (error) {
-    console.error('Error writing digital marketing data to file:', error);
-  }
-};
-
 export async function GET() {
-  const items = readDigitalMarketingItemsFromFile();
-  return NextResponse.json(items);
+  try {
+    const { data, error } = await supabase
+      .from('digital_marketing')
+      .select('*')
+      .order('id', { ascending: true });
+
+    if (error) {
+      console.error('Supabase error:', error);
+      // Return file data as fallback
+      return NextResponse.json(initialDigitalMarketingItems);
+    }
+
+    return NextResponse.json(data || []);
+  } catch (error) {
+    console.error('Error fetching digital marketing data:', error);
+    return NextResponse.json(initialDigitalMarketingItems);
+  }
 }
 
 export async function POST(request: Request) {
   try {
-    const newItemsData: DigitalMarketingItem[] = await request.json();
-    if (!Array.isArray(newItemsData)) {
-      return NextResponse.json({ message: 'Invalid data format. Expected an array.' }, { status: 400 });
+    const itemData = await request.json();
+    
+    // Handle single item (not bulk update)
+    if (!itemData.title || !itemData.client) {
+      return NextResponse.json({ message: 'Title and client are required' }, { status: 400 });
     }
-    writeDigitalMarketingItemsToFile(newItemsData);
-    return NextResponse.json({ message: 'Digital marketing data saved successfully' }, { status: 200 });
+
+    let result;
+    if (itemData.id && itemData.id !== 0) {
+      // Update existing item
+      const { data, error } = await supabase
+        .from('digital_marketing')
+        .update({
+          title: itemData.title,
+          client: itemData.client,
+          description: itemData.description,
+          image: itemData.image,
+          services: itemData.services,
+          project_url: itemData.projectUrl
+        })
+        .eq('id', itemData.id)
+        .select();
+      
+      result = { data, error };
+    } else {
+      // Insert new item
+      const { data, error } = await supabase
+        .from('digital_marketing')
+        .insert({
+          title: itemData.title,
+          client: itemData.client,
+          description: itemData.description,
+          image: itemData.image,
+          services: itemData.services,
+          project_url: itemData.projectUrl
+        })
+        .select();
+      
+      result = { data, error };
+    }
+
+    if (result.error) {
+      console.error('Supabase error:', result.error);
+      return NextResponse.json({ message: 'Database error', error: result.error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ message: 'Item saved successfully' }, { status: 200 });
   } catch (error) {
-    console.error('Error processing POST request for digital marketing:', error);
-    return NextResponse.json({ message: 'Error saving digital marketing data', error: (error as Error).message }, { status: 500 });
+    console.error('Error processing POST request:', error);
+    return NextResponse.json({ message: 'Error saving data', error: (error as Error).message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const url = new URL(request.url);
+    const id = url.searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ message: 'ID is required' }, { status: 400 });
+    }
+
+    const { error } = await supabase
+      .from('digital_marketing')
+      .delete()
+      .eq('id', parseInt(id));
+
+    if (error) {
+      console.error('Supabase error:', error);
+      return NextResponse.json({ message: 'Database error', error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ message: 'Item deleted successfully' }, { status: 200 });
+  } catch (error) {
+    console.error('Error processing DELETE request:', error);
+    return NextResponse.json({ message: 'Error deleting data', error: (error as Error).message }, { status: 500 });
   }
 }

@@ -1,10 +1,10 @@
 // src/components/JobOpenings/JobOpeningModal.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ArrowRight, CheckCircle } from 'lucide-react';
-import { JobOpening } from '@/types/jobOpenings';
+import { JobOpening } from '@/lib/supabase';
 import JobApplicationForm from './JobApplicationForm';
 
 interface JobOpeningModalProps {
@@ -28,9 +28,17 @@ const JobOpeningModal: React.FC<JobOpeningModalProps> = ({ job, onClose }) => {
   const [showApplicationForm, setShowApplicationForm] = useState(false);
   const [applicationSuccess, setApplicationSuccess] = useState(false);
   
+  // Modal her açıldığında state'leri sıfırla
+  useEffect(() => {
+    if (job) {
+      setShowApplicationForm(false);
+      setApplicationSuccess(false);
+    }
+  }, [job?.id]); // job.id değiştiğinde state'leri sıfırla
+  
   if (!job) return null;
 
-  const { details } = job;
+  // Supabase veri yapısını kullan
   
   const handleApplyClick = () => {
     setShowApplicationForm(true);
@@ -78,7 +86,7 @@ const JobOpeningModal: React.FC<JobOpeningModalProps> = ({ job, onClose }) => {
 
             <div className="flex flex-col md:flex-row justify-between items-start mb-6">
               <h2 className="text-3xl font-bold text-purple-400 mb-2 md:mb-0">
-                {details.fullTitle}
+                {job.full_title || job.title}
               </h2>
               {!showApplicationForm && !applicationSuccess && (
                 <button
@@ -94,7 +102,7 @@ const JobOpeningModal: React.FC<JobOpeningModalProps> = ({ job, onClose }) => {
             {showApplicationForm ? (
               <JobApplicationForm 
                 jobId={job.id} 
-                jobTitle={details.fullTitle}
+                jobTitle={job.full_title || job.title}
                 onClose={handleFormClose}
                 onSuccess={handleApplicationSuccess}
               />
@@ -111,14 +119,14 @@ const JobOpeningModal: React.FC<JobOpeningModalProps> = ({ job, onClose }) => {
                 <div>
                   <h3 className="text-xl font-semibold text-purple-300 mb-2">Description</h3>
                   <p className="text-gray-300 leading-relaxed whitespace-pre-line">
-                    {details.description}
+                    {job.description}
                   </p>
                 </div>
 
                 <div>
                   <h3 className="text-xl font-semibold text-purple-300 mb-2">What You'll Be Doing</h3>
                   <ul className="space-y-2">
-                    {details.whatYouWillDo.map((item, index) => (
+                    {job.what_you_will_do?.map((item, index) => (
                       <li key={index} className="flex items-start text-gray-300">
                         <CheckCircle size={18} className="mr-3 mt-1 text-purple-400 flex-shrink-0" />
                         {item}
@@ -130,7 +138,7 @@ const JobOpeningModal: React.FC<JobOpeningModalProps> = ({ job, onClose }) => {
                 <div>
                   <h3 className="text-xl font-semibold text-purple-300 mb-2">What We're Looking For</h3>
                   <ul className="space-y-2">
-                    {details.whatWereLookingFor.map((item, index) => (
+                    {job.what_were_looking_for?.map((item, index) => (
                       <li key={index} className="flex items-start text-gray-300">
                         <CheckCircle size={18} className="mr-3 mt-1 text-purple-400 flex-shrink-0" />
                         {item}
@@ -142,7 +150,7 @@ const JobOpeningModal: React.FC<JobOpeningModalProps> = ({ job, onClose }) => {
                 <div>
                   <h3 className="text-xl font-semibold text-purple-300 mb-2">Why Join Us?</h3>
                   <ul className="space-y-2">
-                    {details.whyJoinUs.map((item, index) => (
+                    {job.why_join_us?.map((item, index) => (
                       <li key={index} className="flex items-start text-gray-300">
                         <CheckCircle size={18} className="mr-3 mt-1 text-purple-400 flex-shrink-0" />
                         {item}

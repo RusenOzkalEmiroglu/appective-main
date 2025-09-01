@@ -16,6 +16,7 @@ import {
   tableCellClasses,
   inputBaseClasses
 } from '@/app/utils/constants';
+import { fetchWithAuth } from '@/lib/auth';
 
 // Delete Confirmation Modal Component
 interface DeleteConfirmationModalProps {
@@ -67,7 +68,7 @@ const AdminServicesPage = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/services');
+      const response = await fetchWithAuth('/api/services');
       if (!response.ok) {
         const errData = await response.json().catch(() => ({ message: 'Failed to fetch services' }));
         throw new Error(errData.message || `HTTP error! status: ${response.status}`);
@@ -106,9 +107,8 @@ const AdminServicesPage = () => {
     const method = isEditMode ? 'PUT' : 'POST';
 
     try {
-      const response = await fetch(url, {
+      const response = await fetchWithAuth(url, {
         method: method,
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
 
@@ -144,9 +144,8 @@ const AdminServicesPage = () => {
       const url = '/api/services';
       const method = 'POST';
 
-      const response = await fetch(url, {
+      const response = await fetchWithAuth(url, {
         method: method,
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newService),
       });
 
@@ -196,7 +195,7 @@ const AdminServicesPage = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/services/${itemToDelete.id}`, {
+      const response = await fetchWithAuth(`/api/services/${itemToDelete.id}`, {
         method: 'DELETE',
       });
       if (!response.ok) {

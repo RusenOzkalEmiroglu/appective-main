@@ -1,97 +1,82 @@
 import { NextRequest, NextResponse } from 'next/server';
-import path from 'path';
-import fs from 'fs/promises';
-import { ApplicationItem } from '@/data/types';
+import { supabase } from '@/lib/supabase';
+import { withAdminAuthSimple } from '@/lib/withAdminAuth';
 
-// Path to the data file
-const dataFilePath = path.join(process.cwd(), 'src', 'data', 'applicationsData.ts');
-
-// Helper function to read data from the file
-async function readData(): Promise<ApplicationItem[]> {
+// GET: Fetch all applications from Supabase
+export async function GET() {
   try {
-    const fileContent = await fs.readFile(dataFilePath, 'utf-8');
-    const jsonMatch = fileContent.match(/export const applicationsData: ApplicationItem\[\] = ([\s\S]*?);/);
-    if (jsonMatch && jsonMatch[1]) {
-      try {
-        return new Function(`return ${jsonMatch[1]}`)();
-      } catch (e) {
-        console.error('Could not parse data from file:', e);
-        return [];
-      }
+    const { data, error } = await supabase
+      .from('applications')
+      .select('*')
+      .order('id');
+    
+    if (error) {
+      console.error('Error fetching applications from Supabase:', error);
+      return NextResponse.json({ message: 'Failed to fetch applications' }, { status: 500 });
     }
-    return [];
+    
+    return NextResponse.json(data || []);
   } catch (error) {
-    return [];
+    console.error('Error reading applications data:', error);
+    return NextResponse.json({ message: 'Failed to read applications data' }, { status: 500 });
   }
 }
 
-// Helper function to write data to the file
-async function writeData(data: ApplicationItem[]): Promise<void> {
-  const fileContent = `// This file is managed by the API. Do not edit directly.
-import { ApplicationItem } from '@/data/types';
-
-export const applicationsData: ApplicationItem[] = ${JSON.stringify(data, null, 2)};
-`;
-  await fs.writeFile(dataFilePath, fileContent, 'utf-8');
-}
-
-// GET: Fetch all applications
-export async function GET() {
-  const applications = await readData();
-  return NextResponse.json(applications);
-}
-
-// POST: Add a new application
-export async function POST(request: NextRequest) {
+// POST: Add a new application to Supabase
+async function postHandler(request: NextRequest) {
   try {
-    const newApplicationData: Omit<ApplicationItem, 'id'> = await request.json();
+    const newApplicationData = await request.json();
     if (!newApplicationData.title || !newApplicationData.description) {
       return NextResponse.json({ message: 'Title and description are required' }, { status: 400 });
     }
-    const applications = await readData();
-    
-    const maxId = applications.reduce((max, app) => app.id > max ? app.id : max, 0);
-    const newId = maxId + 1;
 
-    const applicationWithId: ApplicationItem = { ...newApplicationData, id: newId };
+    const { data, error } = await supabase
+      .from('applications')
+      .insert([newApplicationData])
+      .select()
+      .single();
     
-    applications.push(applicationWithId);
-    await writeData(applications);
-    
-    return NextResponse.json(applicationWithId, { status: 201 });
+    if (error) {
+      console.error('Error adding application to Supabase:', error);
+      return NextResponse.json({ message: 'Failed to add application' }, { status: 500 });
+    }
+
+    return NextResponse.json(data, { status: 201 });
   } catch (error) {
     console.error('Failed to create application:', error);
     return NextResponse.json({ message: 'Error creating application', errorDetails: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }
 }
 
-// PUT: Update an existing application
-export async function PUT(request: NextRequest) {
+// PUT: Update an existing application in Supabase
+async function putHandler(request: NextRequest) {
   try {
-    const updatedApplication: ApplicationItem = await request.json();
+    const updatedApplication = await request.json();
     if (!updatedApplication.id) {
       return NextResponse.json({ message: 'Application ID is required for update' }, { status: 400 });
     }
-    let applications = await readData();
+
+    const { data, error } = await supabase
+      .from('applications')
+      .update(updatedApplication)
+      .eq('id', updatedApplication.id)
+      .select()
+      .single();
     
-    const index = applications.findIndex(app => app.id === updatedApplication.id);
-    
-    if (index === -1) {
-      return NextResponse.json({ message: 'Application not found' }, { status: 404 });
+    if (error) {
+      console.error('Error updating application in Supabase:', error);
+      return NextResponse.json({ message: 'Failed to update application' }, { status: 500 });
     }
-    
-    applications[index] = updatedApplication;
-    await writeData(applications);
-    
-    return NextResponse.json(updatedApplication);
+
+    return NextResponse.json(data);
   } catch (error) {
     console.error('Failed to update application:', error);
     return NextResponse.json({ message: 'Error updating application', errorDetails: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }
 }
 
-// DELETE: Remove an application
-export async function DELETE(request: NextRequest) {
+// DELETE: Remove an application from Supabase
+async function deleteHandler(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -100,17 +85,15 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ message: 'Application ID is required' }, { status: 400 });
     }
 
-    const applicationId = parseInt(id, 10);
-    let applications = await readData();
+    const { error } = await supabase
+      .from('applications')
+      .delete()
+      .eq('id', parseInt(id, 10));
     
-    const initialLength = applications.length;
-    const filteredApplications = applications.filter(app => app.id !== applicationId);
-    
-    if (initialLength === filteredApplications.length) {
-      return NextResponse.json({ message: 'Application not found' }, { status: 404 });
+    if (error) {
+      console.error('Error deleting application from Supabase:', error);
+      return NextResponse.json({ message: 'Failed to delete application' }, { status: 500 });
     }
-    
-    await writeData(filteredApplications);
     
     return NextResponse.json({ message: 'Application deleted successfully' }, { status: 200 });
   } catch (error) {
@@ -118,3 +101,8 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ message: 'Error deleting application', errorDetails: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }
 }
+
+// Wrap handlers with authentication
+export const POST = withAdminAuthSimple(postHandler);
+export const PUT = withAdminAuthSimple(putHandler);
+export const DELETE = withAdminAuthSimple(deleteHandler);

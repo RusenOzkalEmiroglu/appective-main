@@ -21,5 +21,16 @@ export const initialGames: GameItem[] = [
     "platforms": "Coming Soon",
     "projectUrl": "https://appective.net",
     "id": 1
+  },
+  {
+    "title": "ıeüeaüt",
+    "description": "iaiüiüaiü",
+    "image": "/uploads/bdd27c4e-5537-4432-bd0b-91fef4854e71.png",
+    "features": [
+      "aiaüiü"
+    ],
+    "platforms": "Coming Soon",
+    "projectUrl": "https://www.parakulis.com",
+    "id": 2
   }
 ];

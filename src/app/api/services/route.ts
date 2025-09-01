@@ -1,47 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
-import { ServiceCategory } from '@/types/service';
+import { supabase } from '@/lib/supabase';
 import { withAdminAuthSimple } from '@/lib/withAdminAuth';
 
-const dataFilePath = path.join(process.cwd(), 'src', 'data', 'servicesData.json');
-
-// Helper to ensure the data directory and file exist
-async function ensureFileExists() {
-  try {
-    await fs.access(dataFilePath);
-  } catch {
-    try {
-      await fs.mkdir(path.dirname(dataFilePath), { recursive: true });
-      await fs.writeFile(dataFilePath, JSON.stringify([], null, 2));
-    } catch (setupError) {
-      console.error('Failed to create services data file or directory:', setupError);
-      throw new Error('Failed to initialize services data storage.');
-    }
-  }
-}
-
-// Helper function to read data from the JSON file
-async function readServicesData(): Promise<ServiceCategory[]> {
-  await ensureFileExists();
-  const fileContent = await fs.readFile(dataFilePath, 'utf-8');
-  return JSON.parse(fileContent);
-}
-
-// Helper function to write data to the JSON file
-async function writeServicesData(data: ServiceCategory[]) {
-  await ensureFileExists();
-  await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2), 'utf-8');
-}
-
-// --- Public Handlers ---
-
-// GET handler remains public
+// GET handler - fetch services from Supabase
 export async function GET() {
   try {
-    const services = await readServicesData();
-    return NextResponse.json(services);
+    const { data, error } = await supabase
+      .from('services')
+      .select('*')
+      .order('id');
+    
+    if (error) {
+      console.error('Error fetching services from Supabase:', error);
+      return NextResponse.json({ message: 'Failed to fetch services data' }, { status: 500 });
+    }
+    
+    return NextResponse.json(data || []);
   } catch (error) {
     console.error('Error reading services data:', error);
     return NextResponse.json({ message: 'Failed to read services data' }, { status: 500 });
@@ -50,26 +24,27 @@ export async function GET() {
 
 // --- Protected Handlers ---
 
-// Original POST handler logic
+// POST handler - add service to Supabase
 async function postHandler(request: NextRequest) {
   try {
-    const newService: Omit<ServiceCategory, 'id'> = await request.json();
+    const newService = await request.json();
 
     if (!newService || typeof newService.name !== 'string' || !newService.name.trim()) {
       return NextResponse.json({ message: 'Invalid service data. Name is required.' }, { status: 400 });
     }
 
-    const services = await readServicesData();
+    const { data, error } = await supabase
+      .from('services')
+      .insert([newService])
+      .select()
+      .single();
     
-    const newServiceWithId: ServiceCategory = {
-      ...newService,
-      id: uuidv4(), // Assign a new unique ID
-    };
+    if (error) {
+      console.error('Error adding service to Supabase:', error);
+      return NextResponse.json({ message: 'Failed to add service' }, { status: 500 });
+    }
 
-    const updatedServices = [...services, newServiceWithId];
-    await writeServicesData(updatedServices);
-
-    return NextResponse.json(newServiceWithId, { status: 201 });
+    return NextResponse.json(data, { status: 201 });
   } catch (error) {
     console.error('Error processing POST request for services:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

@@ -19,5 +19,16 @@ export const initialDigitalMarketingItems: DigitalMarketingItem[] = [
     ],
     "projectUrl": "https://garanti.com.tr",
     "id": 4
+  },
+  {
+    "title": "üieüiü",
+    "client": "ieaüiüiaüi",
+    "description": "eüaüiüieü",
+    "image": "/uploads/e551fd8c-3aea-4134-9f63-5573a980c6a0.png",
+    "services": [
+      "servisiaüiüiü"
+    ],
+    "projectUrl": "https://www.donnakulis.com/",
+    "id": 5
   }
 ];

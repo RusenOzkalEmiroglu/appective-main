@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, FC, ReactNode, useCallback } from 'react';
 import Image from 'next/image';
+import { supabase } from '@/lib/supabase';
 
 // --- Reusable Confirmation Modal Component --- //
 interface ConfirmationModalProps {
@@ -48,22 +49,37 @@ const AdminTopBannerManagement: FC = () => {
 
   const fetchBanner = useCallback(async () => {
     try {
-      const response = await fetch('/api/banner');
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.src) {
-          setCurrentBanner(data);
-          setTargetUrl(data.targetUrl || '');
-        } else {
-          setCurrentBanner(null);
-          setTargetUrl('');
-        }
+      console.log('Fetching banner data...'); // Debug
+      
+      const { data, error } = await supabase
+        .from('top_banner')
+        .select('id, title, subtitle, description, button_text, button_link, background_image')
+        .eq('id', 1)
+        .maybeSingle();
+      
+      console.log('Fetch result:', { data, error }); // Debug
+      
+      if (error) {
+        console.error('Banner fetch error:', error);
+        setCurrentBanner(null);
+        setTargetUrl('');
+        return;
+      }
+      
+      if (data) {
+        console.log('Setting banner data:', data); // Debug
+        setCurrentBanner({
+          src: data.background_image || '',
+          targetUrl: data.button_link || ''
+        });
+        setTargetUrl(data.button_link || '');
       } else {
+        console.log('No banner record found, will create on save'); // Debug
         setCurrentBanner(null);
         setTargetUrl('');
       }
     } catch (error) {
-      console.error('Failed to fetch banner:', error);
+      console.error('Banner yüklenirken hata:', error);
       setCurrentBanner(null);
       setTargetUrl('');
     }
@@ -106,28 +122,99 @@ const AdminTopBannerManagement: FC = () => {
 
     try {
       if (modalContent.action === 'save') {
-        const formData = new FormData();
-        if (newImage) formData.append('bannerImage', newImage);
-        formData.append('targetUrl', targetUrl);
-        const response = await fetch('/api/banner', { method: 'POST', body: formData });
-        if (!response.ok) throw new Error((await response.json()).message || 'Failed to save');
+        // Resim yükleme işlemi
+        let imageUrl = currentBanner?.src || '';
+        
+        if (newImage) {
+          // Resmi public/images/banner klasörüne kaydet
+          const formData = new FormData();
+          formData.append('file', newImage);
+          
+          try {
+            const uploadResponse = await fetch('/api/upload-banner', {
+              method: 'POST',
+              body: formData,
+            });
+            
+            if (uploadResponse.ok) {
+              const result = await uploadResponse.json();
+              imageUrl = result.url;
+            } else {
+              throw new Error('Resim yükleme başarısız');
+            }
+          } catch (uploadError) {
+            // API yoksa, basit yol kullan
+            imageUrl = `/images/banner/${newImage.name}`;
+          }
+        }
+
+        // Supabase'i güncelle
+        const updateData = {
+          button_link: targetUrl,
+          background_image: imageUrl
+        };
+
+        console.log('Updating with data:', updateData); // Debug
+
+        // Önce kayıt var mı kontrol et
+        const { data: existingRecord } = await supabase
+          .from('top_banner')
+          .select('id')
+          .eq('id', 1)
+          .maybeSingle();
+
+        let result;
+        if (existingRecord) {
+          // Kayıt varsa güncelle
+          result = await supabase
+            .from('top_banner')
+            .update(updateData)
+            .eq('id', 1)
+            .select();
+        } else {
+          // Kayıt yoksa oluştur
+          const insertData = {
+            id: 1,
+            title: 'Welcome to Appective',
+            subtitle: 'Digital Marketing & Development',
+            description: 'We create innovative digital solutions for your business',
+            button_text: 'Get Started',
+            ...updateData
+          };
+          result = await supabase
+            .from('top_banner')
+            .insert(insertData)
+            .select();
+        }
+        
+        console.log('Save result:', result); // Debug
+        
+        if (result.error) {
+          console.error('Save error:', result.error);
+          throw result.error;
+        }
+
         success = true;
-        showFeedback('success', 'Banner updated successfully!');
+        showFeedback('success', 'Banner başarıyla güncellendi!');
       } else if (modalContent.action === 'delete') {
-        const response = await fetch('/api/banner', { method: 'DELETE' });
-        if (!response.ok) throw new Error((await response.json()).message || 'Failed to delete');
+        const { error } = await supabase
+          .from('top_banner')
+          .update({ background_image: null })
+          .eq('id', 1);
+        
+        if (error) throw error;
         success = true;
-        showFeedback('success', 'Banner deleted successfully!');
+        showFeedback('success', 'Banner başarıyla silindi!');
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      showFeedback('error', `Error: ${errorMessage}`);
+      const errorMessage = error instanceof Error ? error.message : 'Bilinmeyen bir hata oluştu';
+      showFeedback('error', `Hata: ${errorMessage}`);
     } finally {
       setIsModalOpen(false);
       setIsActionInProgress(false);
       if (success) {
         setNewImage(null);
-        await fetchBanner(); // Re-fetch data to ensure UI is in sync
+        await fetchBanner();
       }
     }
   };
@@ -158,7 +245,7 @@ const AdminTopBannerManagement: FC = () => {
 
       <div className="mb-6">
         <h3 className="text-xl font-semibold mb-2">Current Banner</h3>
-        {currentBanner ? (
+        {currentBanner && currentBanner.src ? (
           <div className="border border-gray-700 p-4 rounded-md bg-gray-800">
             <Image src={currentBanner.src} alt="Current Banner" width={500} height={100} className="rounded-md object-contain" unoptimized />
             <p className="mt-2 text-sm text-gray-400">Target URL: {currentBanner.targetUrl || 'Not set'}</p>

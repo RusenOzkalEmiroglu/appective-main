@@ -38,8 +38,8 @@ async function uploadHandler(request: NextRequest) {
 
     // Generate a unique filename
     const fileExtension = path.extname(file.name);
-    const uniqueId = uuidv4().substring(0, 16);
-    const uniqueFilename = `${type === 'preview' ? 'preview' : 'popup-html5'}-${uniqueId}${fileExtension}`;
+    const uniqueId = uuidv4();
+    const uniqueFilename = `${uniqueId}${fileExtension}`;
 
     // Define the path based on file type
     let baseDir, publicPath;
@@ -49,9 +49,9 @@ async function uploadHandler(request: NextRequest) {
       baseDir = path.join(process.cwd(), 'public', 'interactive_mastheads_zips', sanitizedCategory, sanitizedBrand);
       publicPath = `/interactive_mastheads_zips/${sanitizedCategory}/${sanitizedBrand}/${uniqueFilename.replace('.zip', '')}`;
     } else {
-      // For images
-      baseDir = path.join(process.cwd(), 'public', 'images', 'interactive-mastheads', sanitizedCategory, sanitizedBrand);
-      publicPath = `/images/interactive-mastheads/${sanitizedCategory}/${sanitizedBrand}/${uniqueFilename}`;
+      // For images - use uploads directory for applications
+      baseDir = path.join(process.cwd(), 'public', 'uploads');
+      publicPath = `/uploads/${uniqueFilename}`;
     }
 
     // Ensure the directory exists
@@ -104,7 +104,8 @@ async function uploadHandler(request: NextRequest) {
       
       return NextResponse.json({ 
         success: true, 
-        filePath: publicPath 
+        filePath: publicPath,
+        url: publicPath
       });
     }
   } catch (error) {

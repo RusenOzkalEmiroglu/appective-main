@@ -1,87 +1,110 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
+import { supabase } from '@/lib/supabase';
 import { GameItem, initialGames as initialGamesData } from '@/data/gamesData';
 
-const dataFilePath = path.join(process.cwd(), 'src', 'data', 'gamesData.ts');
-
-// Helper function to read data from the file
-const readGamesFromFile = (): GameItem[] => {
-  try {
-    // Read the raw file content
-    const fileContent = fs.readFileSync(dataFilePath, 'utf-8');
-    // Extract the JSON-like array part from the file content
-    // This is a simplified approach and might need to be more robust
-    // depending on the exact structure of your data file.
-    const match = fileContent.match(/export const initialGames: GameItem\[\] = ([\s\S]*?);/);
-    if (match && match[1]) {
-      // The matched group is a string representation of the array.
-      // We need to make it valid JSON before parsing.
-      // This typically involves ensuring keys and string values are in double quotes.
-      // For this specific structure, it might be complex to parse directly as JSON.
-      // A more robust solution would be to store data in actual JSON files or a database.
-      
-      // For now, returning initialGamesData if parsing fails or is too complex
-      // This means changes won't persist across server restarts without a proper DB or JSON file handling
-      try {
-        // Attempt to parse if the structure is simple enough (e.g. using eval, which is not recommended for security reasons)
-        // A safer way would be to use a proper JSON parser or a more structured data storage.
-        // For simplicity in this example, we will rely on the initial data and not persist changes to the .ts file directly in this manner.
-        // To properly persist, you would write back to the file in the correct TypeScript format.
-        return initialGamesData; // Fallback to initial data as direct TS file parsing/writing is complex here
-      } catch (e) {
-        console.error('Error parsing games data from file:', e);
-        return initialGamesData; // Fallback
-      }
-    }
-    return initialGamesData; // Fallback if no match
-  } catch (error) {
-    console.error('Error reading games data file:', error);
-    return initialGamesData; // Fallback to initial data if file read fails
-  }
-};
-
-// Helper function to write data to the file
-// IMPORTANT: Directly writing to a .ts file like this is generally not recommended for production
-// as it can lead to issues with module caching, build processes, and is error-prone.
-// A database or a dedicated JSON file for data is a much better approach.
-const writeGamesToFile = (data: GameItem[]) => {
-  const tsContent = `export interface GameItem {
-  id: number;
-  title: string;
-  description: string;
-  image: string;
-  features: string[];
-  platforms: string;
-  projectUrl?: string;
-}
-
-export const initialGames: GameItem[] = ${JSON.stringify(data, null, 2)};
-`;
-  try {
-    fs.writeFileSync(dataFilePath, tsContent, 'utf-8');
-  } catch (error) {
-    console.error('Error writing games data to file:', error);
-    // Handle error appropriately
-  }
-};
-
 export async function GET() {
-  const games = readGamesFromFile();
-  return NextResponse.json(games);
+  try {
+    const { data, error } = await supabase
+      .from('games')
+      .select('*')
+      .order('id', { ascending: true });
+
+    if (error) {
+      console.error('Supabase error:', error);
+      // Return file data as fallback
+      return NextResponse.json(initialGamesData);
+    }
+
+    // Map Supabase field names to frontend interface
+    const mappedData = (data || []).map(item => ({
+      ...item,
+      projectUrl: item.project_url
+    }));
+
+    return NextResponse.json(mappedData);
+  } catch (error) {
+    console.error('Error fetching games data:', error);
+    return NextResponse.json(initialGamesData);
+  }
 }
 
 export async function POST(request: Request) {
   try {
-    const newGamesData: GameItem[] = await request.json();
-    // Basic validation (you might want to add more thorough validation)
-    if (!Array.isArray(newGamesData)) {
-      return NextResponse.json({ message: 'Invalid data format. Expected an array.' }, { status: 400 });
+    const itemData = await request.json();
+    
+    // Handle single item (not bulk update)
+    if (!itemData.title || !itemData.description) {
+      return NextResponse.json({ message: 'Title and description are required' }, { status: 400 });
     }
-    writeGamesToFile(newGamesData);
-    return NextResponse.json({ message: 'Games data saved successfully' }, { status: 200 });
+
+    let result;
+    if (itemData.id && itemData.id !== 0) {
+      // Update existing item
+      const { data, error } = await supabase
+        .from('games')
+        .update({
+          title: itemData.title,
+          description: itemData.description,
+          image: itemData.image,
+          features: itemData.features,
+          platforms: itemData.platforms,
+          project_url: itemData.projectUrl
+        })
+        .eq('id', itemData.id)
+        .select();
+      
+      result = { data, error };
+    } else {
+      // Insert new item
+      const { data, error } = await supabase
+        .from('games')
+        .insert({
+          title: itemData.title,
+          description: itemData.description,
+          image: itemData.image,
+          features: itemData.features,
+          platforms: itemData.platforms,
+          project_url: itemData.projectUrl
+        })
+        .select();
+      
+      result = { data, error };
+    }
+
+    if (result.error) {
+      console.error('Supabase error:', result.error);
+      return NextResponse.json({ message: 'Database error', error: result.error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ message: 'Item saved successfully' }, { status: 200 });
   } catch (error) {
-    console.error('Error processing POST request for games:', error);
-    return NextResponse.json({ message: 'Error saving games data', error: (error as Error).message }, { status: 500 });
+    console.error('Error processing POST request:', error);
+    return NextResponse.json({ message: 'Error saving data', error: (error as Error).message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const url = new URL(request.url);
+    const id = url.searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ message: 'ID is required' }, { status: 400 });
+    }
+
+    const { error } = await supabase
+      .from('games')
+      .delete()
+      .eq('id', parseInt(id));
+
+    if (error) {
+      console.error('Supabase error:', error);
+      return NextResponse.json({ message: 'Database error', error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ message: 'Item deleted successfully' }, { status: 200 });
+  } catch (error) {
+    console.error('Error processing DELETE request:', error);
+    return NextResponse.json({ message: 'Error deleting data', error: (error as Error).message }, { status: 500 });
   }
 }

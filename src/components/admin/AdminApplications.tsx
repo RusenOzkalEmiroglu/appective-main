@@ -11,6 +11,7 @@ type ApplicationFormData = {
   image: string;
   features: string; 
   platforms: string;
+  project_url: string;
 }
 
 interface ApplicationFormProps {
@@ -26,6 +27,7 @@ const ApplicationForm: React.FC<ApplicationFormProps> = ({ item, onSave, onCance
     image: '',
     features: '',
     platforms: '',
+    project_url: '',
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -38,10 +40,11 @@ const ApplicationForm: React.FC<ApplicationFormProps> = ({ item, onSave, onCance
         image: item.image,
         features: Array.isArray(item.features) ? item.features.join(', ') : '',
         platforms: item.platforms,
+        project_url: item.project_url || '',
       });
       setImagePreview(item.image);
     } else {
-      setFormData({ title: '', description: '', image: '', features: '', platforms: '' });
+      setFormData({ title: '', description: '', image: '', features: '', platforms: '', project_url: '' });
       setImagePreview(null);
     }
   }, [item]);
@@ -71,10 +74,14 @@ const ApplicationForm: React.FC<ApplicationFormProps> = ({ item, onSave, onCance
       const formDataForUpload = new FormData();
       formDataForUpload.append('file', imageFile);
       try {
-        const response = await fetch('/api/upload', { method: 'POST', body: formDataForUpload });
+        const response = await fetch('/api/upload', { 
+          method: 'POST', 
+          body: formDataForUpload,
+          credentials: 'include'
+        });
         if (!response.ok) throw new Error('Image upload failed');
         const result = await response.json();
-        imageUrl = result.url;
+        imageUrl = result.filePath || result.url;
       } catch (error) {
         console.error('Error uploading image:', error);
         return;
@@ -95,7 +102,11 @@ const ApplicationForm: React.FC<ApplicationFormProps> = ({ item, onSave, onCance
     try {
       const response = await fetch(endpoint, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cookie': document.cookie
+        },
+        credentials: 'include',
         body: JSON.stringify(finalData),
       });
 
@@ -150,6 +161,10 @@ const ApplicationForm: React.FC<ApplicationFormProps> = ({ item, onSave, onCance
           <div>
             <label htmlFor="platforms" className="block text-sm font-medium text-gray-300 mb-1">Platforms</label>
             <input id="platforms" name="platforms" value={formData.platforms} onChange={handleChange} className={inputStyles} required />
+          </div>
+          <div>
+            <label htmlFor="project_url" className="block text-sm font-medium text-gray-300 mb-1">Project URL</label>
+            <input id="project_url" name="project_url" type="url" value={formData.project_url} onChange={handleChange} className={inputStyles} placeholder="https://example.com" />
           </div>
           <div className="flex justify-end space-x-4 pt-4">
             <button type="button" onClick={onCancel} className={`${buttonStyles} bg-gray-600 hover:bg-gray-500`}>Cancel</button>
@@ -210,7 +225,10 @@ export default function AdminApplications() {
     if (!applicationToDelete) return;
 
     try {
-      const response = await fetch(`/api/applications?id=${applicationToDelete.id}`, { method: 'DELETE' });
+      const response = await fetch(`/api/applications?id=${applicationToDelete.id}`, { 
+        method: 'DELETE',
+        credentials: 'include'
+      });
       if (!response.ok) throw new Error('Failed to delete');
       setApplications(prev => prev.filter(p => p.id !== applicationToDelete.id));
     } catch (err: any) {

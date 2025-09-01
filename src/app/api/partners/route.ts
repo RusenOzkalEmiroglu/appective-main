@@ -1,76 +1,74 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import { v4 as uuidv4 } from 'uuid';
-import path from 'path';
-import { 
-  readPartnersData, 
-  writePartnersData, 
-  PartnerCategory, 
-  partnerLogosBasePath 
-} from '@/lib/partnersDataUtils';
-import { withAdminAuthSimple } from '@/lib/withAdminAuth';
+import { supabase } from '@/lib/supabase';
 
-// --- Public API Handlers ---
-
-// GET handler to fetch all partner categories (Publicly accessible)
+// GET handler to fetch all partner categories from Supabase
 export async function GET() {
   try {
-    const partners = await readPartnersData();
-    return NextResponse.json(partners);
+    // Fetch categories
+    const { data: categoriesData, error: categoriesError } = await supabase
+      .from('partner_categories')
+      .select('*')
+      .order('id');
+    
+    if (categoriesError) throw categoriesError;
+
+    // Fetch logos for each category
+    const { data: logosData, error: logosError } = await supabase
+      .from('partner_logos')
+      .select('*')
+      .order('id');
+    
+    if (logosError) throw logosError;
+
+    // Combine categories with their logos
+    const categoriesWithLogos = (categoriesData || []).map(category => ({
+      id: category.id.toString(),
+      name: category.name,
+      originalPath: category.original_path,
+      logos: (logosData || [])
+        .filter(logo => logo.category_id === category.id)
+        .map(logo => ({
+          id: logo.id.toString(),
+          alt: logo.alt,
+          imagePath: logo.image_path,
+          url: logo.url || undefined
+        }))
+    }));
+
+    return NextResponse.json(categoriesWithLogos);
   } catch (error) {
     console.error('Failed to fetch partners data:', error);
     return NextResponse.json({ message: 'Failed to fetch partners data' }, { status: 500 });
   }
 }
 
-// --- Protected API Handlers ---
-
-// Original POST handler logic to add a new partner category
-async function postHandler(request: NextRequest) {
+// POST handler - Admin panel already uses Supabase directly, so this is not needed
+// But keeping it for consistency with other API routes
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, originalPath } = body as { name: string, originalPath: string };
+    const { name, original_path } = body;
 
-    if (!name || !originalPath) {
-      return NextResponse.json({ message: 'Missing required category fields: name and originalPath are required.' }, { status: 400 });
+    if (!name || !original_path) {
+      return NextResponse.json({ message: 'Name and original_path are required' }, { status: 400 });
     }
 
-    const newCategoryData: PartnerCategory = {
-      id: uuidv4(),
-      name,
-      originalPath,
-      logos: [], // New categories start with no logos
-    };
+    const { data, error } = await supabase
+      .from('partner_categories')
+      .insert([{
+        name,
+        original_path
+      }])
+      .select();
 
-    const partners = await readPartnersData();
-
-    if (partners.some(cat => cat.id === newCategoryData.id) || partners.some(cat => cat.originalPath === newCategoryData.originalPath)) {
-      return NextResponse.json({ message: `Category with this ID or originalPath already exists.` }, { status: 409 });
+    if (error) {
+      console.error('Supabase error:', error);
+      return NextResponse.json({ message: 'Database error', error: error.message }, { status: 500 });
     }
 
-    partners.push(newCategoryData);
-
-    const logoDir = path.join(partnerLogosBasePath, newCategoryData.originalPath);
-    try {
-      await fs.mkdir(logoDir, { recursive: true });
-    } catch (dirError) {
-      console.error(`Failed to create directory ${logoDir}:`, dirError);
-      // Proceeding even if directory creation fails, as JSON update is the primary goal.
-    }
-
-    await writePartnersData(partners);
-    return NextResponse.json(newCategoryData, { status: 201 });
-
+    return NextResponse.json({ message: 'Category created successfully', data }, { status: 201 });
   } catch (error) {
-    console.error('Failed to create partner category:', error);
-    if (error instanceof SyntaxError) {
-        return NextResponse.json({ message: 'Invalid JSON payload' }, { status: 400 });
-    }
-    return NextResponse.json({ message: 'Failed to create partner category' }, { status: 500 });
+    console.error('Error creating category:', error);
+    return NextResponse.json({ message: 'Error creating category' }, { status: 500 });
   }
 }
-
-// Wrap the protected POST handler with authentication
-export const POST = withAdminAuthSimple(postHandler);
-
-// Note: PUT and DELETE for categories are in /api/partners/[categoryId]/route.ts

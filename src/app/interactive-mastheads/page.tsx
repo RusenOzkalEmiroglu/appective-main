@@ -4,7 +4,8 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { mastheadData, MastheadItem, categories } from '@/data/interactiveMastheadsData';
+import { MastheadItem } from '@/data/interactiveMastheadsData';
+import { supabase } from '@/lib/supabase';
 import dynamic from 'next/dynamic';
 
 const DynamicTypographicBackground = dynamic(
@@ -21,9 +22,57 @@ export default function InteractiveMastheadsPage() {
   const [isAdFormatDropdownOpen, setIsAdFormatDropdownOpen] = useState(false);
   const [selectedMasthead, setSelectedMasthead] = useState<MastheadItem | null>(null);
   const [displayText, setDisplayText] = useState(false);
+  const [mastheadData, setMastheadData] = useState<MastheadItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const brandDropdownRef = useRef<HTMLDivElement>(null);
   const adFormatDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Supabase'den veri çekme
+  useEffect(() => {
+    const fetchMastheads = async () => {
+      try {
+        console.log('Masthead verileri çekiliyor...');
+        const { data, error } = await supabase
+          .from('interactive_mastheads')
+          .select('*')
+          .order('id');
+        
+        if (error) {
+          console.error('Supabase hatası:', error);
+          throw error;
+        }
+        
+        console.log('Supabase\'den gelen veri:', data);
+        
+        // Supabase verilerini MastheadItem formatına dönüştür
+        const formattedData = (data || []).map((item: any) => ({
+          id: item.id,
+          category: item.category,
+          brand: item.brand,
+          title: item.title,
+          image: item.image,
+          popupHtmlPath: item.popup_html_path,
+          popupTitle: item.popup_title,
+          popupDescription: item.popup_description || '',
+          bannerDetails: {
+            size: item.banner_size || '',
+            platforms: item.banner_platforms || ''
+          }
+        }));
+        
+        console.log('Formatlanmış veri:', formattedData);
+        console.log('Veri uzunluğu:', formattedData.length);
+        setMastheadData(formattedData);
+      } catch (err) {
+        console.error('Masthead verileri yüklenemedi:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMastheads();
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -70,10 +119,15 @@ export default function InteractiveMastheadsPage() {
     exit: { opacity: 0, rotateY: 90, transition: { duration: 0.25, ease: 'easeInOut' } },
   };
 
+  const categories = useMemo(() => {
+    const uniqueCategories = new Set(mastheadData.map((item: MastheadItem) => item.category.toUpperCase()));
+    return ['ALL', ...Array.from(uniqueCategories)];
+  }, [mastheadData]);
+
   const allBrands = useMemo(() => {
     const brands = new Set(mastheadData.map((item: MastheadItem) => item.brand));
     return ['ALL', ...Array.from(brands)];
-  }, []);
+  }, [mastheadData]);
   
   const allAdFormats = useMemo(() => {
     const formats = new Set(mastheadData.map((item: MastheadItem) => {
@@ -81,7 +135,7 @@ export default function InteractiveMastheadsPage() {
       return item.bannerDetails.size.replace(/\s*px\s*/gi, '').trim();
     }));
     return ['ALL', ...Array.from(formats)];
-  }, []);
+  }, [mastheadData]);
 
   const brandsForSelectedCategory = useMemo(() => {
     if (selectedCategory === 'ALL') return [];
@@ -91,27 +145,58 @@ export default function InteractiveMastheadsPage() {
         .map((item: MastheadItem) => item.brand)
     );
     return Array.from(brands);
-  }, [selectedCategory]);
+  }, [selectedCategory, mastheadData]);
 
   const filteredMastheads = useMemo(() => {
-    let data: MastheadItem[] = mastheadData;
+    console.log('Filtreleme başlıyor:', {
+      selectedCategory,
+      selectedBrand,
+      selectedAdFormat,
+      mastheadDataLength: mastheadData.length,
+      mastheadData: mastheadData
+    });
     
+    // Eğer veri henüz yüklenmediyse boş array döndür
+    if (mastheadData.length === 0) {
+      return [];
+    }
+    
+    let data: MastheadItem[] = [...mastheadData];
+    
+    // Kategori filtresi
+    if (selectedCategory !== 'ALL') {
+      data = data.filter((item: MastheadItem) => {
+        const match = item.category.toUpperCase() === selectedCategory;
+        console.log(`Category filter: ${item.category} === ${selectedCategory}? ${match}`);
+        return match;
+      });
+      console.log('Category filtresi sonrası:', data.length);
+    }
+    
+    // Brand filtresi
     if (selectedBrand !== 'ALL') {
-      data = data.filter((item: MastheadItem) => item.brand === selectedBrand);
-    }
-    else if (selectedCategory !== 'ALL') {
-      data = data.filter((item: MastheadItem) => item.category.toUpperCase() === selectedCategory);
+      data = data.filter((item: MastheadItem) => {
+        const match = item.brand === selectedBrand;
+        console.log(`Brand filter: ${item.brand} === ${selectedBrand}? ${match}`);
+        return match;
+      });
+      console.log('Brand filtresi sonrası:', data.length);
     }
     
+    // Ad Format filtresi
     if (selectedAdFormat !== 'ALL') {
       data = data.filter((item: MastheadItem) => {
-        const cleanSize = item.bannerDetails.size.replace(/\s*px\s*/gi, '').trim();
-        return cleanSize === selectedAdFormat;
+        const cleanSize = item.bannerDetails?.size?.replace(/\s*px\s*/gi, '').trim() || '';
+        const match = cleanSize === selectedAdFormat;
+        console.log(`AdFormat filter: ${cleanSize} === ${selectedAdFormat}? ${match}`);
+        return match;
       });
+      console.log('AdFormat filtresi sonrası:', data.length);
     }
     
+    console.log('Final filtrelenmiş veri:', data.length, data);
     return data;
-  }, [selectedCategory, selectedBrand, selectedAdFormat]);
+  }, [selectedCategory, selectedBrand, selectedAdFormat, mastheadData]);
 
   const handleCategoryClick = (category: string) => {
     setSelectedCategory(category);
@@ -180,7 +265,7 @@ export default function InteractiveMastheadsPage() {
                   <AnimatePresence>
                     {isBrandDropdownOpen && (
                       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute left-0 mt-2 w-48 bg-dark/90 backdrop-blur-lg border border-purple-500/30 rounded-lg shadow-xl z-50 overflow-hidden">
-                        {allBrands.map(brand => (
+                        {allBrands.map((brand: string) => (
                           <button key={brand} onClick={() => handleGlobalBrandChange(brand)} className="block w-full text-left px-4 py-2 text-sm text-white/80 hover:bg-purple-700/80 transition-colors duration-300 font-library-3-am">
                             {brand}
                           </button>
@@ -200,7 +285,7 @@ export default function InteractiveMastheadsPage() {
                   <AnimatePresence>
                     {isAdFormatDropdownOpen && (
                       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute left-0 mt-2 w-48 bg-dark/90 backdrop-blur-lg border border-purple-500/30 rounded-lg shadow-xl z-50 overflow-hidden">
-                        {allAdFormats.map(format => (
+                        {allAdFormats.map((format: string) => (
                           <button key={format} onClick={() => handleAdFormatChange(format)} className="block w-full text-left px-4 py-2 text-sm text-white/80 hover:bg-purple-700/80 transition-colors duration-300 font-library-3-am">
                             {format}
                           </button>
@@ -214,7 +299,7 @@ export default function InteractiveMastheadsPage() {
               <div className="flex flex-col items-end order-1 sm:order-2">
                 <span className="text-xs font-library-3-am text-white/70 mb-1.5">Categories</span>
                 <div className="flex flex-wrap justify-center gap-2">
-                  {categories.map(category => (
+                  {categories.map((category: string) => (
                     <button
                       key={category}
                       onClick={() => handleCategoryClick(category)}
@@ -227,28 +312,38 @@ export default function InteractiveMastheadsPage() {
             </div>
           </div>
 
-          <AnimatePresence mode="wait">
-            <motion.div key={selectedCategory + '-' + selectedBrand} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {filteredMastheads.map((item: MastheadItem) => (
-                <motion.div 
-                  key={item.id} 
-                  className="cursor-pointer bg-black/20 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/10 transition-all duration-300 group hover:border-primary/80 hover:shadow-2xl hover:shadow-primary/20"
-                  layout 
-                  whileHover={{ y: -8, scale: 1.03 }}
-                  onClick={() => setSelectedMasthead(item)}
-                >
-                  <div className="relative w-full h-48">
-                    <Image src={item.image} alt={item.brand} layout="fill" objectFit="cover" className="transition-transform duration-500 group-hover:scale-110" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="text-xl font-bold font-library-3-am">{item.brand}</h3>
-                    <p className="text-sm text-white/60 font-library-3-am uppercase tracking-wider">{item.category}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </motion.div>
-          </AnimatePresence>
+          {isLoading ? (
+            <div className="flex justify-center items-center py-20">
+              <div className="text-white/70 text-lg font-library-3-am">Loading...</div>
+            </div>
+          ) : filteredMastheads.length === 0 ? (
+            <div className="flex justify-center items-center py-20">
+              <div className="text-white/70 text-lg font-library-3-am">Veri bulunamadı</div>
+            </div>
+          ) : (
+            <AnimatePresence mode="wait">
+              <motion.div key={selectedCategory + '-' + selectedBrand} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {filteredMastheads.map((item: MastheadItem) => (
+                  <motion.div 
+                    key={item.id} 
+                    className="cursor-pointer bg-black/20 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/10 transition-all duration-300 group hover:border-primary/80 hover:shadow-2xl hover:shadow-primary/20"
+                    layout 
+                    whileHover={{ y: -8, scale: 1.03 }}
+                    onClick={() => setSelectedMasthead(item)}
+                  >
+                    <div className="relative w-full h-48">
+                      <Image src={item.image} alt={item.brand} layout="fill" objectFit="cover" className="transition-transform duration-500 group-hover:scale-110" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                    </div>
+                    <div className="p-4">
+                      <h3 className="text-xl font-bold font-library-3-am">{item.brand}</h3>
+                      <p className="text-sm text-white/60 font-library-3-am uppercase tracking-wider">{item.category}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </AnimatePresence>
+          )}
         </div>
       </div>
       <MastheadPopup masthead={selectedMasthead} onClose={() => setSelectedMasthead(null)} />

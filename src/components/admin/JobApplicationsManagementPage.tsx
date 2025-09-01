@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { JobApplication } from '@/types/jobApplication';
 import { Loader2, AlertCircle, Download, Eye, CheckCircle, XCircle, Clock, FileDown } from 'lucide-react';
+import { fetchWithAuth } from '@/lib/auth';
 
 const JobApplicationsManagementPage = () => {
   const [applications, setApplications] = useState<JobApplication[]>([]);
@@ -13,25 +14,30 @@ const JobApplicationsManagementPage = () => {
   const [jobFilter, setJobFilter] = useState<string>('all');
   const [uniqueJobs, setUniqueJobs] = useState<{id: string, title: string}[]>([]);
   const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [confirmAction, setConfirmAction] = useState<{id: string, status: 'pending' | 'reviewed' | 'rejected'} | null>(null);
 
   const fetchApplications = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/job-applications');
-      if (!response.ok) throw new Error('Başvurular alınamadı.');
+      const response = await fetchWithAuth('/api/job-applications');
+      if (!response.ok) {
+        throw new Error('Failed to fetch applications');
+      }
       const data = await response.json();
+      
+      // Data is already mapped by the API
       setApplications(data);
       
-      // Benzersiz iş pozisyonlarını çıkar
+      // Extract unique jobs
       const uniqueJobsMap = new Map();
-      data.forEach((app: JobApplication) => {
+      data.forEach((app: any) => {
         if (!uniqueJobsMap.has(app.jobId)) {
           uniqueJobsMap.set(app.jobId, { id: app.jobId, title: app.jobTitle });
         }
       });
       setUniqueJobs(Array.from(uniqueJobsMap.values()));
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Başvurular yüklenirken hata oluştu.');
     } finally {
       setIsLoading(false);
     }
@@ -45,30 +51,35 @@ const JobApplicationsManagementPage = () => {
     });
   }, []);
 
-  const updateApplicationStatus = async (id: string, status: 'pending' | 'reviewed' | 'contacted' | 'rejected') => {
+  const handleStatusChange = (id: string, status: 'pending' | 'reviewed' | 'rejected') => {
+    setConfirmAction({ id, status });
+  };
+
+  const handleConfirmStatusChange = async () => {
+    if (!confirmAction) return;
+
     try {
-      const response = await fetch(`/api/job-applications/${id}`, {
+      const response = await fetchWithAuth(`/api/job-applications/${confirmAction.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status: confirmAction.status })
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Sunucudan geçerli bir hata mesajı alınamadı.' }));
-        throw new Error(`Sunucu yanıtı: ${response.status} - ${errorData.message || JSON.stringify(errorData)}`);
+        throw new Error('Failed to update application status');
       }
-
-      const updatedApplication = await response.json();
 
       setApplications(prev => 
-        prev.map(app => app.id === id ? { ...app, status: updatedApplication.status, updatedAt: updatedApplication.updatedAt } : app)
+        prev.map(app => app.id === confirmAction.id ? { ...app, status: confirmAction.status } : app)
       );
 
-      if (selectedApplication && selectedApplication.id === id) {
-        setSelectedApplication(prev => prev ? { ...prev, status: updatedApplication.status, updatedAt: updatedApplication.updatedAt } : null);
+      if (selectedApplication && selectedApplication.id === confirmAction.id) {
+        setSelectedApplication(prev => prev ? { ...prev, status: confirmAction.status } : null);
       }
+
+      setConfirmAction(null);
 
     } catch (error) {
       let errorMessage = 'Bilinmeyen bir hata oluştu.';
@@ -76,8 +87,13 @@ const JobApplicationsManagementPage = () => {
         errorMessage = error.message;
       }
       console.error('Durum güncelleme hatası:', error);
-      alert(`Hata: Durum güncellenemedi.\nDetay: ${errorMessage}`);
+      setError(`Hata: Durum güncellenemedi. ${errorMessage}`);
+      setConfirmAction(null);
     }
+  };
+
+  const handleCancelStatusChange = () => {
+    setConfirmAction(null);
   };
 
   const getStatusBadge = (status: string) => {
@@ -86,8 +102,7 @@ const JobApplicationsManagementPage = () => {
         return <span className="flex items-center bg-yellow-500/20 text-yellow-300 text-xs px-2 py-1 rounded-full"><Clock size={12} className="mr-1" /> Bekliyor</span>;
       case 'reviewed':
         return <span className="flex items-center bg-blue-500/20 text-blue-300 text-xs px-2 py-1 rounded-full"><Eye size={12} className="mr-1" /> İncelendi</span>;
-      case 'contacted':
-        return <span className="flex items-center bg-green-500/20 text-green-300 text-xs px-2 py-1 rounded-full"><CheckCircle size={12} className="mr-1" /> İletişime Geçildi</span>;
+
       case 'rejected':
         return <span className="flex items-center bg-red-500/20 text-red-300 text-xs px-2 py-1 rounded-full"><XCircle size={12} className="mr-1" /> Reddedildi</span>;
       default:
@@ -133,7 +148,7 @@ const JobApplicationsManagementPage = () => {
       // CSV içeriğini oluştur
       const csvContent = [
         headers.join(','),
-        ...rows.map(row => row.map(cell => 
+        ...rows.map((row, rowIndex) => row.map((cell, cellIndex) => 
           // Virgül veya tırnak içeriyorsa, tırnak içine al ve içerideki tırnakları escape et
           cell ? `"${cell.toString().replace(/"/g, '""')}"` : ''
         ).join(','))
@@ -206,7 +221,7 @@ const JobApplicationsManagementPage = () => {
                   <option value="all">Tüm Durumlar</option>
                   <option value="pending">Bekliyor</option>
                   <option value="reviewed">İncelendi</option>
-                  <option value="contacted">İletişime Geçildi</option>
+
                   <option value="rejected">Reddedildi</option>
                 </select>
               </div>
@@ -255,7 +270,7 @@ const JobApplicationsManagementPage = () => {
                         {application.jobTitle}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300">
-                        {formatDate(application.createdAt.toString())}
+                        {formatDate(application.createdAt?.toString() || '')}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         {getStatusBadge(application.status)}
@@ -367,30 +382,74 @@ const JobApplicationsManagementPage = () => {
               <h3 className="text-lg font-semibold text-purple-300 mb-3">Durumu Güncelle</h3>
               <div className="flex flex-wrap gap-2">
                 <button 
-                  onClick={() => updateApplicationStatus(selectedApplication.id, 'pending')} 
+                  onClick={() => handleStatusChange(selectedApplication.id, 'pending')} 
                   className={`px-3 py-2 rounded-lg flex items-center text-sm ${selectedApplication.status === 'pending' ? 'bg-yellow-500 text-white' : 'bg-gray-700 text-yellow-300 hover:bg-yellow-500/20'}`}
                 >
                   <Clock size={16} className="mr-1" /> Bekliyor
                 </button>
                 <button 
-                  onClick={() => updateApplicationStatus(selectedApplication.id, 'reviewed')} 
+                  onClick={() => handleStatusChange(selectedApplication.id, 'reviewed')} 
                   className={`px-3 py-2 rounded-lg flex items-center text-sm ${selectedApplication.status === 'reviewed' ? 'bg-blue-500 text-white' : 'bg-gray-700 text-blue-300 hover:bg-blue-500/20'}`}
                 >
                   <Eye size={16} className="mr-1" /> İncelendi
                 </button>
+
                 <button 
-                  onClick={() => updateApplicationStatus(selectedApplication.id, 'contacted')} 
-                  className={`px-3 py-2 rounded-lg flex items-center text-sm ${selectedApplication.status === 'contacted' ? 'bg-green-500 text-white' : 'bg-gray-700 text-green-300 hover:bg-green-500/20'}`}
-                >
-                  <CheckCircle size={16} className="mr-1" /> İletişime Geçildi
-                </button>
-                <button 
-                  onClick={() => updateApplicationStatus(selectedApplication.id, 'rejected')} 
+                  onClick={() => handleStatusChange(selectedApplication.id, 'rejected')} 
                   className={`px-3 py-2 rounded-lg flex items-center text-sm ${selectedApplication.status === 'rejected' ? 'bg-red-500 text-white' : 'bg-gray-700 text-red-300 hover:bg-red-500/20'}`}
                 >
                   <XCircle size={16} className="mr-1" /> Reddedildi
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmAction && (
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" 
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              handleCancelStatusChange();
+            }
+          }}
+        >
+          <div 
+            className="bg-gray-800 p-6 rounded-lg max-w-md w-full mx-4 border border-gray-600"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-white mb-4">Durumu Güncelle</h3>
+            <p className="text-gray-300 mb-6">
+              Bu başvurunun durumunu <strong className="text-purple-400">
+                {confirmAction.status === 'pending' ? 'Bekliyor' : 
+                 confirmAction.status === 'reviewed' ? 'İncelendi' : 'Reddedildi'}
+              </strong> olarak değiştirmek istediğinizden emin misiniz?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleCancelStatusChange();
+                }}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+              >
+                İptal
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleConfirmStatusChange();
+                }}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+              >
+                Onayla
+              </button>
             </div>
           </div>
         </div>

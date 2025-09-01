@@ -1,0 +1,332 @@
+/* Genel Gövde Stilleri */
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden;
+    background-color: #f0f2f5;
+}
+
+/* Reklam Konteyneri */
+.ad-container {
+    width: 100%;
+    height: 100vh;
+    background: linear-gradient(145deg, #3D1E6D, #5C2D91);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+    text-align: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* Başlık */
+.ad-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 25px; /* Logo ve metin arası boşluk */
+    padding-top: 10px;
+    animation: slideInDown 1.2s cubic-bezier(0.165, 0.84, 0.44, 1) 0.2s forwards;
+    opacity: 0;
+}
+
+.header-logo img {
+    height: 150px; /* Logo boyutu ayarlandı */
+    width: auto;
+    mix-blend-mode: screen; /* Logonun arka planını sayfanın gradienti ile bütünleştirir */
+    filter: drop-shadow(3px 3px 5px rgba(0,0,0,0.25)); /* Kaliteli bir görünüm için gölge eklendi */
+}
+
+.header-text {
+    text-align: left;
+}
+
+.header-text h1 {
+    margin: 0;
+    font-size: 2.2em;
+    font-weight: 700;
+    /* Hafif parlama ve derinlik için çift gölge eklendi */
+    text-shadow: 0 0 12px rgba(255, 255, 255, 0.25), 1px 1px 3px rgba(0,0,0,0.3);
+}
+
+.header-text p {
+    margin: 5px 0 0;
+    font-size: 1.1em;
+    font-weight: 300;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3); /* Okunabilirliği artırmak için hafif gölge */
+}
+
+/* İnteraktif Harita Konteyneri */
+.map-container {
+    width: 100%;
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+/* İnteraktif Harita Konteyneri - Viewport birimleri ile boyutlandırma */
+#turkey-map-interactive {
+    width: 80vw;  /* Ekran genişliğinin %80'i */
+    height: 75vh; /* Ekran yüksekliğinin %75'i */
+    max-width: 1200px; /* Çok geniş ekranlarda haritanın aşırı büyümesini engeller */
+    max-height: 800px;
+}
+
+/* SVG'nin konteynere tam sığması */
+#turkey-map-interactive svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* SVG Harita İlleri */
+#turkey-map-interactive g path {
+    fill: #AFAFAF; /* Varsayılan il rengi */
+    stroke: #fff;
+    stroke-width: 0.8;
+    transition: fill 0.2s ease, stroke 0.2s ease;
+    cursor: pointer;
+}
+
+/* Kampüsü olan iller için başlangıç rengi */
+#turkey-map-interactive g.has-campus path {
+    fill: #FFEEB3; /* Soluk Sarı */
+}
+
+/* Harita/* Kampüs Listesi Stilleri */
+#campus-list {
+    margin-top: 20px;
+    padding: 0; /* Padding'i item'lara taşıyalım */
+    text-align: left;
+}
+
+.campus-item {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+    border-left: 5px solid #0033A0; /* Uğur mavisi ile vurgu */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.campus-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.campus-item:last-child {
+    margin-bottom: 0;
+}
+
+.campus-item h4 {
+    font-family: 'Poppins', sans-serif;
+    font-size: 18px; /* Biraz büyütelim */
+    font-weight: 700;
+    color: #0033A0; /* Uğur Okulları mavisi */
+    margin: 0 0 10px 0;
+}
+
+.campus-item p {
+    font-family: 'Poppins', sans-serif;
+    font-size: 15px; /* Biraz büyütelim */
+    color: #444;
+    margin: 0 0 8px 0;
+    line-height: 1.6;
+}
+
+.campus-item p:last-child {
+    margin-bottom: 0;
+}
+
+.campus-item p.phone {
+    font-weight: 600;
+    color: #000;
+    display: flex;
+    align-items: center;
+}
+
+/* Telefon ikonu ekleyelim (opsiyonel, HTML'e ikon eklenirse çalışır) */
+.campus-item p.phone::before {
+    content: '📞'; /* Basit bir emoji ikon */
+    margin-right: 8px;
+    font-size: 1.1em;
+}
+
+.no-campus {
+    font-family: 'Poppins', sans-serif;
+    font-size: 15px;
+    color: #555;
+    padding: 0 25px;
+    margin-top: 20px;
+    text-align: left;
+}
+
+/* Harita Tooltip Stili */
+.map-tooltip {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-size: 1em;
+    pointer-events: none; /* Tooltip'in fare olaylarını engellememesi için */
+    opacity: 0;
+    transform: scale(0.9);
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 1001;
+}
+
+/* Alt Bilgi Alanı */
+.ad-footer {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end; /* Logoyu kaldırdığımız için sadece butonu sağa yaslıyoruz */
+    align-items: center;
+    animation: slideInUp 1.2s cubic-bezier(0.165, 0.84, 0.44, 1) 0.4s forwards;
+    opacity: 0;
+}
+
+.skip-button {
+    background-color: transparent;
+    color: white;
+    border: 1px solid white;
+    padding: 8px 18px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.skip-button:hover {
+    background-color: white;
+    color: #5C2D91;
+}
+
+/* Yan Panel */
+.side-panel {
+    position: fixed;
+    top: 0;
+    right: -34%; /* Başlangıçta gizli */
+    width: 33.33%;
+    height: 100%;
+    background-color: #f9f9f9; /* Panelin arka planını hafifçe gri yapalım */
+    box-shadow: -8px 0 25px rgba(0, 0, 0, 0.15); /* Gölgeyi daha belirgin hale getirelim */
+    transition: right 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.side-panel.active {
+    right: 0; /* Aktif olduğunda görünür */
+}
+
+.close-button {
+    position: absolute;
+    top: 20px;
+    right: 25px;
+    background: transparent;
+    border: none;
+    font-size: 2.8em;
+    color: rgba(255, 255, 255, 0.8); /* Beyaz ve hafif şeffaf */
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.3s, transform 0.3s;
+    z-index: 10; /* Header'ın üzerinde kalması için */
+}
+
+.close-button:hover {
+    color: #fff;
+    transform: rotate(90deg); /* Hover'da dönme efekti */
+}
+
+.panel-header {
+    background: linear-gradient(135deg, #3D1E6D, #5C2D91); /* Ana sayfadaki gradient */
+    color: white;
+    text-align: center;
+    padding: 30px 25px;
+    flex-shrink: 0;
+    position: relative; /* Close button'u konumlandırmak için */
+}
+
+.panel-logo {
+    max-width: 160px;
+    mix-blend-mode: screen; /* Arka planı kaldırmak için denenebilir bir yöntem */
+    /* Not: Bu özelliğin çalışması için logo dosyasının yapısı önemlidir. 
+       Eğer istenen sonuç alınmazsa, transparan bir logo dosyası kullanmak en iyisidir. */
+}
+
+.panel-body {
+    color: #333;
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 25px 30px;
+}
+
+/* Panel için özel scrollbar */
+.panel-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.panel-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.panel-body::-webkit-scrollbar-thumb {
+    background: #5C2D91;
+    border-radius: 4px;
+}
+
+.panel-body::-webkit-scrollbar-thumb:hover {
+    background: #3D1E6D;
+}
+
+
+.panel-body h2 {
+    color: #3D1E6D; /* Koyu mor */
+    font-size: 2.2em;
+    margin-top: 0;
+    margin-bottom: 25px; /* Başlık altına boşluk */
+    font-weight: 700;
+    border-bottom: 2px solid #5C2D91; /* Alt çizgi */
+    padding-bottom: 10px;
+}
+
+.panel-body p {
+    font-size: 1.1em;
+    line-height: 1.6;
+}
+
+/* Sayfa Yükleme Animasyonları */
+@keyframes slideInDown {
+    from {
+        transform: translateY(-40px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(40px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { RefreshCw, Download, Search, Trash2, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 interface Subscriber {
   id: string;
@@ -23,14 +24,23 @@ const NewsletterSubscribers = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/newsletter');
-      if (!response.ok) {
-        throw new Error('Failed to fetch subscribers');
-      }
-      const data = await response.json();
-      setSubscribers(data.subscribers || []);
-    } catch (err) {
-      setError('Failed to load subscribers. Please try again.');
+      const { data, error } = await supabase
+        .from('newsletter_subscribers')
+        .select('*')
+        .order('subscribed_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      // Map Supabase data to component format
+      const mappedData = (data || []).map(item => ({
+        id: item.id.toString(),
+        email: item.email,
+        subscribedAt: item.subscribed_at
+      }));
+      
+      setSubscribers(mappedData);
+    } catch (err: any) {
+      setError('Aboneler yüklenirken hata oluştu. Lütfen tekrar deneyin.');
       console.error('Error fetching subscribers:', err);
     } finally {
       setLoading(false);
@@ -43,25 +53,21 @@ const NewsletterSubscribers = () => {
 
   const deleteSubscribersApi = async (ids: string[]) => {
     if (ids.length === 0) return;
-    if (!window.confirm(`Are you sure you want to delete ${ids.length} subscriber(s)?`)) return;
+    if (!window.confirm(`${ids.length} aboneyi silmek istediğinizden emin misiniz?`)) return;
 
     setDeleteLoading(true);
     try {
-      const response = await fetch('/api/newsletter', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids }),
-      });
+      const { error } = await supabase
+        .from('newsletter_subscribers')
+        .delete()
+        .in('id', ids.map(id => parseInt(id)));
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete subscribers');
-      }
+      if (error) throw error;
 
       setSubscribers(prev => prev.filter(s => !ids.includes(s.id)));
       setSelectedSubscribers(prev => prev.filter(subId => !ids.includes(subId)));
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      alert(`Hata: ${err.message || 'Aboneler silinirken hata oluştu.'}`);
     } finally {
       setDeleteLoading(false);
     }

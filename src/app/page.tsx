@@ -3,10 +3,7 @@ export const dynamic = 'force-dynamic';
 import TopBanner from '@/components/TopBanner';
 import HomePageClient from './HomePageClient';
 import { getSocialLinks, getContactInfo } from '@/lib/data';
-import sizeOf from 'image-size';
-import path from 'path';
-import fs from 'fs/promises';
-// ResponsiveTester kaldırıldı
+import { supabase } from '@/lib/supabase';
 
 interface BannerData {
   src: string;
@@ -15,42 +12,32 @@ interface BannerData {
   height: number;
 }
 
-// This function reads directly from the filesystem. No more fragile API calls.
+// Supabase'den banner verilerini al
 async function getBannerData(): Promise<BannerData | null> {
-  const bannerDir = path.join(process.cwd(), 'public', 'images', 'ust');
-  const metadataPath = path.join(bannerDir, 'banner.json');
-
   try {
-    await fs.access(bannerDir);
-    const files = await fs.readdir(bannerDir);
-    const imageFile = files.find(file => /\.(png|jpg|jpeg|gif|webp)$/i.test(file));
-
-    if (!imageFile) {
-      return null; // No image found in the directory
+    const { data, error } = await supabase
+      .from('top_banner')
+      .select('id, background_image, button_link')
+      .limit(1)
+      .maybeSingle();
+    
+    if (error) {
+      console.error('Banner yüklenirken hata:', error);
+      return null;
     }
-
-    const imagePath = path.join(bannerDir, imageFile);
-    const imageBuffer = await fs.readFile(imagePath);
-    const dimensions = sizeOf(imageBuffer);
-
-    let metadata = { targetUrl: '' };
-    try {
-      const metaContent = await fs.readFile(metadataPath, 'utf-8');
-      metadata = JSON.parse(metaContent);
-    } catch (e) {
-      // Metadata file might not exist, which is fine.
+    
+    if (data && data.background_image) {
+      return {
+        src: data.background_image,
+        targetUrl: data.button_link || '',
+        width: 1200, // Default width
+        height: 200, // Default height
+      };
     }
-
-    return {
-      src: `/images/ust/${imageFile}`,
-      targetUrl: metadata.targetUrl,
-      width: dimensions.width ?? 1200, // Provide a fallback width
-      height: dimensions.height ?? 200, // Provide a fallback height
-    };
-
+    
+    return null;
   } catch (error) {
-    // This catches if the directory doesn't exist or other fs errors.
-    // We can safely return null as it means there's no banner to show.
+    console.error('Banner yüklenirken hata:', error);
     return null;
   }
 }

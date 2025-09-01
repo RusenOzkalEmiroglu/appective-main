@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { JobOpening } from '@/types/jobOpenings';
+import { JobOpening } from '@/lib/supabase';
 import JobOpeningCard from './JobOpeningCard';
 import JobOpeningModal from './JobOpeningModal';
 import { motion } from 'framer-motion';

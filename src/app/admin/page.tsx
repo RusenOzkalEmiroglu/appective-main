@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAuth } from '@/lib/auth';
 
 // Import all necessary components
 import NewsletterSubscribers from '@/components/admin/NewsletterSubscribers';
@@ -11,6 +12,7 @@ import AdminJobOpeningsManagementPage from '@/components/admin/AdminJobOpeningsM
 import SocialLinksAdmin from "@/components/admin/SocialLinksAdmin";
 import ContactInfoAdmin from '@/components/admin/ContactInfoAdmin';
 import OurWorksAdminPage from '@/components/admin/OurWorksAdminPage';
+import AdminTeamMembers from '@/components/admin/AdminTeamMembers';
 
 // Imports for "Our Works" sub-pages and others
 import AdminInteractiveMastheads from '@/components/admin/AdminInteractiveMastheads';
@@ -36,23 +38,38 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ title, description, onCli
 
 const AdminPage = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [activeSection, setActiveSection] = useState('dashboard');
   const [isClient, setIsClient] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  const { signIn, signOut, checkAuth, getSavedSession, saveSession, clearSession } = useAuth();
 
   useEffect(() => {
     setIsClient(true);
+    
+    // Check for saved session first
+    const savedSession = getSavedSession();
+    if (savedSession) {
+      setIsAuthenticated(true);
+      return;
+    }
+
     // Check authentication status on mount
     const checkStatus = async () => {
       try {
-        const response = await fetch('/api/auth/status');
-        const data = await response.json();
-        setIsAuthenticated(data.isAdmin);
+        const status = await checkAuth();
+        setIsAuthenticated(status.isAuthenticated && status.isAdmin);
+        
+        if (!status.isAuthenticated) {
+          clearSession();
+        }
       } catch (error) {
         console.error('Error checking auth status:', error);
         setIsAuthenticated(false);
+        clearSession();
       }
     };
     checkStatus();
@@ -61,31 +78,35 @@ const AdminPage = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
+    
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-
-      if (response.ok) {
+      const result = await signIn(email, password);
+      
+      if (result.success) {
+        // Save session to localStorage
+        saveSession(result.session);
         setIsAuthenticated(true);
+        setEmail('');
+        setPassword('');
       } else {
-        const data = await response.json();
-        setError(data.message || 'Invalid username or password');
+        setError(result.message || 'Giriş başarısız');
       }
     } catch (error) {
       console.error('Login failed:', error);
-      setError('An error occurred. Please try again.');
+      setError('Bir hata oluştu. Lütfen tekrar deneyin.');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await signOut();
       setIsAuthenticated(false);
-      setUsername('');
+      setEmail('');
       setPassword('');
+      clearSession();
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -100,6 +121,7 @@ const AdminPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <DashboardCard title="Top Banner" description="Manage the homepage top banner" onClick={() => setActiveSection('top-banner')} />
               <DashboardCard title="Partners" description="Manage partner logos and categories" onClick={() => setActiveSection('partners')} />
+              <DashboardCard title="Team Members" description="Manage team members" onClick={() => setActiveSection('team-members')} />
               <DashboardCard title="Our Services" description="Manage services offered" onClick={() => setActiveSection('our-services')} />
               <DashboardCard title="Job Openings" description="Manage career opportunities" onClick={() => setActiveSection('job-openings')} />
               <DashboardCard title="Job Applications" description="View and manage job applications" onClick={() => setActiveSection('job-applications')} />
@@ -116,6 +138,8 @@ const AdminPage = () => {
         return <NewsletterSubscribers />;
       case 'partners':
         return <AdminPartnersManagementPage />;
+      case 'team-members':
+        return <AdminTeamMembers />;
       case 'job-openings':
         return <AdminJobOpeningsManagementPage />;
       case 'job-applications':
@@ -155,12 +179,12 @@ const AdminPage = () => {
           <h1 className="text-2xl font-bold mb-6 text-white text-center">Appective Admin</h1>
           <form onSubmit={handleLogin}>
             <div className="mb-4">
-              <label htmlFor="username" className="block mb-2 text-sm font-medium text-gray-300">Username</label>
+              <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-300">Email</label>
               <input
-                type="text"
-                id="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                type="email"
+                id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="w-full p-2.5 bg-gray-700 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                 required
               />
@@ -179,9 +203,10 @@ const AdminPage = () => {
             {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
             <button
               type="submit"
-              className="w-full bg-purple-600 text-white py-2.5 px-5 rounded-md hover:bg-purple-700 transition-colors font-medium"
+              disabled={loading}
+              className="w-full bg-purple-600 text-white py-2.5 px-5 rounded-md hover:bg-purple-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Login
+              {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
             </button>
           </form>
         </div>

@@ -1,8 +1,23 @@
-import { getSession } from '@/lib/session';
+import { supabaseAuth } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 
 export async function POST() {
-  const session = await getSession();
-  session.destroy();
-  return NextResponse.json({ success: true });
+  try {
+    const { error } = await supabaseAuth.signOut();
+    
+    if (error) {
+      return NextResponse.json({ 
+        success: false, 
+        message: error.message 
+      }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Logout error:', error);
+    return NextResponse.json({ 
+      success: false, 
+      message: 'Internal server error' 
+    }, { status: 500 });
+  }
 }

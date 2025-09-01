@@ -74,7 +74,9 @@ const SegmentedPartnerLogos = () => {
         if (firstCatWithLogos) {
           setSelectedCategory(firstCatWithLogos.id);
         } else if (data.length > 0) {
-          setSelectedCategory(data[0].id); // Fallback to first category if no logos
+          // Find first category with logos or fallback to first category
+          const categoryWithLogos = data.find(cat => cat.logos.length > 0);
+          setSelectedCategory(categoryWithLogos ? categoryWithLogos.id : data[0].id);
         }
       } catch (err: any) {
         console.error("Error fetching partners:", err);
